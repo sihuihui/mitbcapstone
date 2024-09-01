@@ -2,7 +2,7 @@
 */.ipynb_checkpoints/*
 
 /.quarto/
-/_manuscript
+
 
 /agujournal2019.cls
 /trackchanges.sty
@@ -11,3 +11,6 @@
 .Rdata
 .httr-oauth
 .DS_Store
+data/
+
+/
