@@ -1,111 +1,152 @@
 ---
-title: La Palma Earthquakes
+title: Comparative Analysis Of Non-Spatial and Spatial Approaches In Statistical And Machine Learning Methods for Predicting Singapore Bus Commuter Flows
 author:
-  - name: Steve Purves
-    orcid: 0000-0002-0760-5497
-    corresponding: true
-    email: steve@curvenote.com
-    roles:
-      - Investigation
-      - Project administration
-      - Software
-      - Visualization
-    affiliations:
-      - Curvenote
-  - name: Rowan Cockett
-    orcid: 0000-0002-7859-8394
-    corresponding: false
-    roles: []
-    affiliations:
-      - Curvenote
+  - name: Goh Si Hui 
+    email: sihui.goh.2022@mitb.smu.edu.sg
 keywords:
-  - La Palma
-  - Earthquakes
+  - Commuter flows
+  - Gravity Model
+  - Bus
+  - Singapore 
 abstract: |
-  In September 2021, a significant jump in seismic activity on the island of La Palma (Canary Islands, Spain) signaled the start of a volcanic crisis that still continues at the time of writing. Earthquake data is continually collected and published by the Instituto Geográphico Nacional (IGN). ...
+  <To be updated>
 plain-language-summary: |
-  Earthquake data for the island of La Palma from the September 2021 eruption is found ...
+  <To be updated> 
 key-points:
-  - A web scraping script was developed to pull data from the Instituto Geogràphico Nacional into a machine-readable form for analysis
-  - Earthquake events on La Palma are consistent with the presence of both mantle and crustal reservoirs.
+  - Explore and compare the appropriateness of non-spatial and spatial statistical and machine learning methods to predict Singapore bus commuter flows. 
+  - Illustrate how different non-spatial and spatial approaches in statistical and machine learning methods could be applied to bus commuter flows in Singapore’s context.
+  - Shed light on the strengths and weaknesses of different methods to predict Singapore bus commuter flows, which would be insightful for planners when they want to apply these methods to predict Singapore bus commuter flows. 
+  - Enrich the existing limited research on predicting bus commuter flows in Singapore. 
+  - Contribute to the existing studies on incorporating spatial component when using statistical or machine learning methods to predict commuter flows.  
+  
 date: last-modified
-bibliography: references.bib
-citation:
-  container-title: Earth and Space Science
+bibliography: ref.bib
+csl: apa.csl
 number-sections: true
 ---
 
 ## Introduction
 
-```{r}
-eruptions <- c(1492, 1585, 1646, 1677, 1712, 1949, 1971, 2021)
-n_eruptions <- length(eruptions)
-```
+### Importance of Public Transport in Singapore
 
-```{r}
-#| label: fig-timeline
-#| fig-cap: Timeline of recent earthquakes on La Palma
-#| fig-alt: An event plot of the years of the last 8 eruptions on La Palma.
-#| fig-height: 1.5
-#| fig-width: 6
-par(mar = c(3, 1, 1, 1) + 0.1)
-plot(eruptions, rep(0, n_eruptions), 
-  pch = "|", axes = FALSE)
-axis(1)
-box()
-```
+In 2023, Singapore’s total population was at 5.9 million and it was projected to grow steadily to about 6.9 million by 2030 [@centre_for_liveable_cities_singapore_creating_2016]. With a growing population, there is fierce competition for land in land-scarce Singapore. Currently, the transport infrastructure has already taken up 12% of Singapore’s land space, which is almost the same amount as the land space allocated for housing (14%) [@centre_for_liveable_cities_singapore_creating_2016]. In the long term, it is not feasible nor sustainable to allocate more land for roads and parking lots in land-scarce Singapore. With these considerations, Singapore has been advocating ‘car-lite’ policies and building an efficient, reliable and accessible public transport system since 1960s. As a result, in 2020, close to 60% of the employed residents in Singapore took combinations of bus, Mass Rapid Transit (MRT) or Light Rail Transit (LRT) to work [@kok_more_2021].
 
-```{r}
-#| output: false
-avg_years_between_eruptions <- mean(diff(eruptions[-n_eruptions]))
-avg_years_between_eruptions
-```
+With a large proportion of the population relying on the public transportation system, and along with the government’s ‘car-lite’ policies, it is essential to ensure that the public transportation system can meet the demands of the growing population. To meet the increasing demands, transport planners and providers would need to be able to accurately predict the commuter flows to allocate the necessary resources. Failure to estimate the commuter flow accurately could lead to serious consequences because transportation infrastructure and resources are costly and take time to prepare. For example, underestimating demand for a bus service could lead to residents’ unhappiness and overcrowding of buses during peak periods. Overestimating demand for a bus service could lead to wastage of public resources as the bus would be empty most of the time.
 
-Based on data up to and including 1971, eruptions on La Palma happen every `r round(avg_years_between_eruptions, 1)` years on average.
+### Importance of Buses in Singapore Public Transport 
 
-Studies of the magma systems feeding the volcano, such as @marrero2019, have proposed that there are two main magma reservoirs feeding the Cumbre Vieja volcano; one in the mantle (30-40km depth) which charges and in turn feeds a shallower crustal reservoir (10-20km depth).
+In 2009, Singapore’s Land Transport Authority (LTA) undertook the role of the central bus network planner to enhance the hub-and-spoke system so that the bus and rail services work in partnership [@land_transport_authority_land_2008]. Since then, more buses services have been provided, and existing bus routes were improved. LTA also reduced the waiting time and crowding density by improving bus frequency [@land_transport_authority_land_2013] ; [@land_transport_authority_land_2019]. To be able to achieve such outcomes, the ability to predict demand for buses at the different origin and destination bus stops across different times of the day is important. While the recent land transport master plan published in 2019 focused on further expansion of the rail network, we are of the view that planning for bus transit is still important. This is because new housing estates such as Tengah and upcoming Paya Lebar and Southern Waterfront housing estates are being built and these new residential estates would change the demand and supply of commuters and eventually alter the commuter flows at the origin and destination bus stops. In addition, when commuters’ travelling decisions change, more new bus routes would need to be added, and existing bus routes would need to change. Therefore, to anticipate such changes, the ability to predict demand at various origin and destination bus stops during different times of the day is important. With this in mind, we will be focusing on bus commuter flows for this study.
 
-Eight eruptions have been recorded since the late 1400s (@fig-timeline).
+## Problem Statement and Objectives
 
-Data and methods are discussed in @sec-data-methods.
+Despite the relevance and importance of bus transit to Singapore’s public transportation, the planning and predicting bus demand in Singapore can be done more proactively. Based on our observations and the land transport masterplans, it seemed that the current practice of predicting and planning for bus transit demand is reactive and usually done when there are new residential towns, new MRT lines or stations, or after receiving public feedback. There are also limited research on predicting Singapore bus commuter flows, and few studies had been done to compare the different methods used to predict Singapore bus commuter flows.  In addition, past research studies tend to focus on the use of conventional non-spatial statistical learning and machine learning methods in building predictive models. On the other hand, empirical evidence shows that public bus transit demand is non-stationary spatially and is very much affected by the geographical factors at the demand and supply locations.  In view of this, this capstone project aims to explore and compare the appropriateness of non-spatial and spatial statistical and machine learning methods to predict Singapore bus commuter flows.
 
-Let $x$ denote the number of eruptions in a year. Then, $x$ can be modeled by a Poisson distribution
+Our proposed study can provide value in four-folds:
+
+1.     illustrate how different non-spatial and spatial approaches in statistical and machine learning methods could be applied to bus commuter flows in Singapore’s context,
+
+2.     shed light on the strengths and weaknesses of different methods to predict Singapore bus commuter flows, which would be insightful for planners when they want to apply these methods to predict Singapore bus commuter flows,
+
+3.     enrich the existing limited research on predicting bus commuter flows in Singapore, and,
+
+4.     contribute to the existing studies on incorporating spatial component when using statistical or machine learning methods to predict commuter flows. 
+
+## Preliminary Literature Review
+
+### Theories Explaining Human Commuting Patterns 
+
+#### Intervening Opportunities Model 
+
+@stouffer_intervening_1940 proposed a conceptual framework that rather than distance, it is the number of intervening opportunities or the cumulative number of opportunities between the origin and destination that determines migration. In the Intervening Opportunities (IO) model proposed by [@stouffer_intervening_1940], the number of persons going a given distance is directly proportional to the number of opportunities at that distance and inversely proportional to the number of intervening opportunities.
+
+The traditional form of the IO model is usually given by Schneider’s version of Stouffer’s model, which states that the probability that a trip ends in a given location is equal to the probability that this location offers an acceptable opportunity times the probability that an acceptable opportunity in another location closer to the origin of the trips has not been chosen [@barbosa_human_2018]. The flow $T_{ij}$ from the origin location $i$ to the $j$-th location ranked by travel cost from $i$ is given by the following equation:
 
 $$
-p(x) = \frac{e^{-\lambda} \lambda^{x}}{x !}
-$$ {#eq-poisson}
+T_{ij} = O_i\frac{e^{-LV_{ij-1}}-e^{-LV_{ij}}}{1-e^{-LV_{in}}}
+$$
 
-where $\lambda$ is the rate of eruptions per year. Using @eq-poisson, the probability of an eruption in the next $t$ years can be calculated.
+Where $O_i$ is the total number of trips originating from $i$ and the second term represents the probability that one of these trips ends in location $j$. In the second term, the denominator is a normalisation factor to ensure that the probabilities sum to 1. $V_{ij}$ is the cumulative number of opportunities up to the $j$-th location ranked by travel cost from the origin location $i$ (and $n$ is the total number of locations in the region considered). $L$ is a constant probability of accepting an opportunities destination.
 
-| Name                 | Year   |
-| -------------------- | ------ |
-| Current              | 2021   |
-| Teneguía             | 1971   |
-| Nambroque            | 1949   |
-| El Charco            | 1712   |
-| Volcán San Antonio   | 1677   |
-| Volcán San Martin    | 1646   |
-| Tajuya near El Paso  | 1585   |
-| Montaña Quemada      | 1492   |
+|                                                                                                                                                                                                     |                                                                                                                                                                                                                                                                              |
+|:--------------------------------:|:------------------------------------:|
+|                                                                                                \(A\)                                                                                                |                                                                                                                                    \(B\)                                                                                                                                     |
+| ![Figure 1(A) illustrates that the geographical extent of intervenining opportunities is based on the distance between origin i and destination j.](images/IOModel_1.png){width="311" height="244"} | ![Figure 1(B) shows that the intervening opportunities Vij is composed of the cumulative population of areas in the order of near they are to the origin (i.e. destination a is nearest to origin i, followed by b then c).](images/IOModel_2.png){width="340" height="244"} |
 
-: Recent historic eruptions on La Palma {#tbl-history}
+: Figure 1 - Illustration of Intervening Opportunities Model
 
-@tbl-history summarises the eruptions recorded since the colonization of the islands by Europeans in the late 1400s.
+> Figure 1(A) illustrates that the geographical extent of intervenining opportunities is based on the distance between origin $i$ and destination $j$. Figure 1(B) shows that the intervening opportunities $V_{ij}$ is composed of the cumulative population of areas in the order of near they are to the origin (i.e. destination $a$ is nearest to origin $i$ , followed by $b$ then $c$ ).
 
-![Map of La Palma](images/la-palma-map.png){#fig-map}
+The gravity and the IO models had been compared in various studies, showing that in general, both models performed comparably [@barbosa_human_2018]. Despite relatively good performances, the IO model was less popular, which is mainly due to the lack of research effort into the implementation and calibration of the model.
 
-La Palma is one of the west most islands in the Volcanic Archipelago of the Canary Islands (@fig-map). 
+#### Gravity Model 
 
-{{< embed notebooks/explore-earthquakes.qmd#fig-spatial-plot >}}
+As cited by @barbosa_human_2018, @zipf_p_1946 proposed an equation to calculate mobility flows inspired by Newton's law of gravitation and highlighted the importance of distance in human migration patterns where the magnitude $T_{ij}$ of a migratory flow between two communities $i$ and $j$ can be approximated by the following equation:
 
-@fig-spatial-plot shows the location of recent Earthquakes on La Palma.
+$$
+T_{ij}  \propto \frac{P_iP_j}{r_{ij}}
+$$
 
-## Data & Methods {#sec-data-methods}
+Where $P_i$ and $P_i$ are the respective populations at locations $i$ and $j$ and $r_{ij}$ is the distance between locations $i$ and $j$.
 
-## Conclusion
+![Figure 2 - Illustration of Gravity Model](images/GravityModel.png){fig-alt="In the above figure, i is the origin, j and a are both possible destinations. In gravity model, if both destinations’ populations are the same, the population at i would have a higher tendency to move towards a destination that is nearer (i.e. destination j because it is shorter distance away from i)." fig-align="center" width="275"}
+
+> In the above figure, *i* is the origin, *j* and *a* are both possible destinations. In gravity model, if both destinations’ populations are the same, the population at *i* would have a higher tendency to move towards a destination that is nearer (i.e. destination *j* because it is shorter distance away from *i*).
+
+#### Radiation Model 
+
+### Methods for Calibrating Gravity Models 
+
+#### Statistical Methods 
+
+#### Machine Learning Based Methods 
+
+#### Geographically Weighted Methods 
+
+## Research Design and Methods {#sec-data-methods}
+
+### Data 
+
+For this project, we will use data from LTA Datamall, Department of Statistics, Singapore, and Data.gov.sg. 
+
+-   [Passenger Volume by Bus stops]{.underline}. First, to get the number of trips between origin and destination bus stops, we will make use of the “Passenger Volume by Bus stops” from LTA Datamall which provides information on the number of trips by weekdays and weekends from origin to destination bus stops. To download this dataset, we need to make use of LTA Datamall’s API and we can only request for files up to the last 3 months. This dataset has 7 fields: *Year Month* (e.g. 2024 – 06), *Day type* (i.e. Weekends/ Holiday, Weekday), *Time per hour* which ranges from 0 to 23, *Public Transport Type* which is bus, *origin point code* (i.e. bus stop number of the origin bus stop), *destination point code* (i.e., bus stop number of the destination bus stop) and *total trips*. As this dataset only has the bus stop number of the origin and destination bus stops and does not have the geographical information of the bus stops, we would need to join this data with (1) LTA Datamall’s “Bus Stop Location” dataset to find out the bus stops’ geographical information and (2) the subzone boundary data of URA Master Plan 2019 from data.gov.sg to find out the subzones that these bus stops are located in. To get the total number of commuter flows for morning peak hour on weekdays, we would extract commuter flows on weekday using the *Day type* field and between 6 and 9 in the morning using the *Time per hour* field, then aggregate these flows by the origin and destination bus stops using the *origin point code* and *destination point code*. 
+
+-   [Population Data]{.underline}. To find out the number of people residing at the origins and destinations, we will use the “Singapore Residents by Planning Area/subzone, Single year of age and sex, Jun 2023” dataset from Singapore Department of Statistics. This dataset contains 6 fields: *Planning Area* (e.g. “Ang Mo Kio”), *Subzone* (e.g. “Ang Mo Kio Town Centre”), *Age*, *Sex*, *Population*, and *Time* (i.e. 2023, which is the year of the data being collected). As this dataset provides information on the number of Singapore residents staying at the various planning area and subzones, rather than the exact address, the Passenger Volume by Bus Stops needed to join with the subzone boundary data of URA Master Plan 2019 which contains the information on the planning area and subzone, to know the bus stops are in which planning area and subzone.
+
+-   [Office Location Data]{.underline}. As there are no public dataset on the number of offices in Singapore, we will use a ACRA’s information on corporate entities datasets to get an estimate of the number of offices located in Singapore. ACRA has split the corporate entities by the letter that they start with, there are 27 files containing corporate entities that start from letter ‘A’ to ‘Z’ and others. This dataset has 53 fields, and we are interested in the *Postal Code* field which can give us the geographical location of these corporate entities. To get the geographical location of these corporate entities, we will need to combine all the 27 files, then use the Postal Code in the dataset and OneMap’s API to get the point coordinates of all the corporate entities in Singapore.
+
+### Methods and R Packages 
+
+For this capstone project, we will gather, pre-process and wrangle the data collected from various open-source websites which includes LTA datamall, data.gov.sg and Singapore Department of Statistics. Thereafter, we will analyse the bus commuter flows on weekday morning peak hours from 6am to 9am and examine the key variables the affect commuter movements, such as population density, distribution of employment and transportation infrastructure. Next, we will develop and calibrate gravity models using (1) non-spatial statistical methods such as ordinary least squares regression, Poisson regression, negative binomial distribution, (2) spatial statistical methods such as geographical weighted regression, geographical weighted Poisson regression, geographical weighted negative binomial, (3) non-spatial machine learning methods such as decision trees, random forests, artificial neural networks, and (4) spatial machine learning methods such as geographically weighted random forests, geographically weighted artificial neural networks. Then we will use these calibrated models to predict the commuter flows, compare the predicted flows with actual flows, and evaluate the differences when non-spatial and spatial approaches are applied in statistical and machine learning methods.
+
+For this project, the following R packages would be used:
+
+-   Tidyerse: to import, integrate and manipulate non-spatial data.
+
+-   sf: to import, integrate and process geospatial data.
+
+-   tmap: to create elegant and cartographic quality thematic maps.
+
+-   tidymodels: to build, fit, calibrate and evaluate machine learning models such as SVMs and neural networks.
+
+-   spatialML: to implement a spatial extension of random forest.
+
+-    spatialRF: for automatic generation and selection of spatial predictors for spatial regression with Random Forest.
+
+-   gwann: to implement geographically weighted artificial neural network.
+
+-   GWmodel: to explore spatial heterogeneity using geographically weighted models.
+
+## Schedule
+
+For this capstone project, it would take approximately 16 weeks to complete from date of proposal approval, which is tentatively in September 2024. From June 2024 to August 2024, topic exploration, writing and reviewing of project proposal would take place. Between September 2024 and October 2024, we would be doing data cleaning and wrangling, building and tweaking the models and writing the progress report, which is due 12 weeks from the proposal approval date. From October 2024 to December 2024, the focus would be on finalising the models, and preparing the poster, presentation slides and final report. The details of the various milestones can be seen in [Figure 3]{.underline}.
+
+![Figure 3 - Project Schedule](images/Timeline_1.png){fig-align="center"}
+
+## Conclusions and Contributions
+
+Through this project, it would allow us to compare the non-spatial and spatial approaches in statistical and machine learning methods to predict Singapore bus commuter flows using open-source data. In addition, this project will enrich the existing work on using geographically weighted machine learning methods to predict commuter flows since studies on geographically weighted machine learning methods are still developing. Hence, this project would not only allow us to better understand if geographically weighted machine learning methods can help us better predict commuter flows but also help Singapore transport planners and providers better understand Singapore bus commuters’ demand for buses.
 
 ## References {.unnumbered}
 
-:::{#refs}
-
+::: {#refs}
 :::
