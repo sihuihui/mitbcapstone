@@ -13,6 +13,8 @@ execute:
 
 # Getting Started 
 
+## Downloading the packages 
+
 ```{r}
 pacman::p_load(tmap, sf, DT, stplanr, tidyverse)
 ```
@@ -43,11 +45,98 @@ odbus_jun <- read_csv("data/aspatial/origin_destination_bus_202406.csv")
 
 Checking the data 
 
-:::{.panel-tabset}
+::: {.panel-tabset}
 ## Apr 2024 
 
+```{r}
+glimpse(odbus_apr)
+```
 ## May 2024
+```{r}
+glimpse(odbus_may)
+```
 
 ## Jun 2024
-
+```{r}
+glimpse(odbus_jun)
+```
 ::::
+
+
+Convert the origin and destination codes into factors 
+
+::: {.panel-tabset}
+
+## Apr 2024  
+
+```{r}
+odbus_apr$ORIGIN_PT_CODE <- as.factor(odbus_apr$ORIGIN_PT_CODE)
+
+odbus_apr$DESTINATION_PT_CODE <- as.factor(odbus_apr$DESTINATION_PT_CODE)
+
+glimpse(odbus_apr)
+```
+
+## May 2024
+```{r}
+odbus_may$ORIGIN_PT_CODE <- as.factor(odbus_may$ORIGIN_PT_CODE)
+
+odbus_may$DESTINATION_PT_CODE <- as.factor(odbus_may$DESTINATION_PT_CODE)
+
+glimpse(odbus_may)
+```
+## Jun 2024
+```{r}
+odbus_jun$ORIGIN_PT_CODE <- as.factor(odbus_jun$ORIGIN_PT_CODE)
+
+odbus_jun$DESTINATION_PT_CODE <- as.factor(odbus_jun$DESTINATION_PT_CODE)
+
+glimpse(odbus_jun)
+```
+:::
+
+
+## Geospatial Data 
+
+```{r}
+busstop <- st_read(dsn = "data/spatial",
+                   layer = "BusStop")
+
+glimpse(busstop)
+```
+
+```{r}
+busstop <- st_transform(busstop, crs = 3414)
+glimpse(busstop)
+
+```
+```{r}
+busstop$BUS_STOP_N <- as.factor(busstop$BUS_STOP_N)
+busstop
+
+```
+
+```{r}
+busstop <- write_rds(busstop, "data/rds/busstop.rds")
+```
+
+```{r}
+
+mpsz <- st_read(dsn = "data/spatial",
+                layer = "MPSZ-2019") 
+
+```
+
+```{r}
+mpsz <- st_transform(mpsz, crs = 3414)
+mpsz
+```
+
+```{r}
+mpsz <- write_rds(mpsz, "data/rds/mpsz.rds")
+
+```
+
+
+# Geospatial Data Wrangling 
+
