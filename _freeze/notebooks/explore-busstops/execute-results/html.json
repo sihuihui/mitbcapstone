@@ -1,0 +1,15 @@
+{
+  "hash": "7ecc7977dd3e509c087273acc26261f4",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Exploring the Data - Bus Stops\"\nauthor: \"Goh Si Hui\"\ndate: \"Sep 8 2024\"\ndate-modified: \"last-modified\"\nexecute: \n  eval: true\n  echo: true\n  message: false\n  warning: false\n  freeze: true\n---\n\n\n\n\n\n\n# Getting Started \n\n\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code .hidden}\npacman::p_load(tmap, sf, DT, stplanr, tidyverse)\n```\n:::\n\n\n\n\n\n# Importing the Data \n\n## Passenger Volume by Origin Destination Bus Stops \n\n::: {.panel-tabset}\n\n## Apr 2024  \n\n\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code .hidden}\nodbus_apr <- read_csv(\"data/aspatial/origin_destination_bus_202404.csv\")\n```\n\n::: {.cell-output .cell-output-stderr .hidden}\n\n```\nRows: 5667461 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (5): YEAR_MONTH, DAY_TYPE, PT_TYPE, ORIGIN_PT_CODE, DESTINATION_PT_CODE\ndbl (2): TIME_PER_HOUR, TOTAL_TRIPS\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n```\n\n\n:::\n:::\n\n\n\n\n\n\n## May 2024 \n\n\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code .hidden}\nodbus_may <- read_csv(\"data/aspatial/origin_destination_bus_202405.csv\")\n```\n\n::: {.cell-output .cell-output-stderr .hidden}\n\n```\nRows: 5731170 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (5): YEAR_MONTH, DAY_TYPE, PT_TYPE, ORIGIN_PT_CODE, DESTINATION_PT_CODE\ndbl (2): TIME_PER_HOUR, TOTAL_TRIPS\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n```\n\n\n:::\n:::\n\n\n\n\n\n\n## Jun 2024\n\n\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code .hidden}\nodbus_jun <- read_csv(\"data/aspatial/origin_destination_bus_202406.csv\")\n```\n\n::: {.cell-output .cell-output-stderr .hidden}\n\n```\nRows: 5658443 Columns: 7\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (5): YEAR_MONTH, DAY_TYPE, PT_TYPE, ORIGIN_PT_CODE, DESTINATION_PT_CODE\ndbl (2): TIME_PER_HOUR, TOTAL_TRIPS\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n```\n\n\n:::\n:::\n\n\n\n\n\n::: \n\nCheckignn the data \n\n:::{.panel-tabset}\n## Apr 2024 \n\n## May 2024\n\n## Jun 2024\n\n::::",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

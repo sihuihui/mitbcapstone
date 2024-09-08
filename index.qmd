@@ -19,7 +19,8 @@ key-points:
   - Enrich the existing limited research on predicting bus commuter flows in Singapore. 
   - Contribute to the existing studies on incorporating spatial component when using statistical or machine learning methods to predict commuter flows.  
   
-date: last-modified
+date: 2024/09/01
+data-modified: last-modified
 bibliography: ref.bib
 csl: apa.csl
 number-sections: true
@@ -33,7 +34,7 @@ In 2023, Singapore’s total population was at 5.9 million and it was projected 
 
 With a large proportion of the population relying on the public transportation system, and along with the government’s ‘car-lite’ policies, it is essential to ensure that the public transportation system can meet the demands of the growing population. To meet the increasing demands, transport planners and providers would need to be able to accurately predict the commuter flows to allocate the necessary resources. Failure to estimate the commuter flow accurately could lead to serious consequences because transportation infrastructure and resources are costly and take time to prepare. For example, underestimating demand for a bus service could lead to residents’ unhappiness and overcrowding of buses during peak periods. Overestimating demand for a bus service could lead to wastage of public resources as the bus would be empty most of the time.
 
-### Importance of Buses in Singapore Public Transport 
+### Importance of Buses in Singapore Public Transport
 
 In 2009, Singapore’s Land Transport Authority (LTA) undertook the role of the central bus network planner to enhance the hub-and-spoke system so that the bus and rail services work in partnership [@land_transport_authority_land_2008]. Since then, more buses services have been provided, and existing bus routes were improved. LTA also reduced the waiting time and crowding density by improving bus frequency [@land_transport_authority_land_2013] ; [@land_transport_authority_land_2019]. To be able to achieve such outcomes, the ability to predict demand for buses at the different origin and destination bus stops across different times of the day is important. While the recent land transport master plan published in 2019 focused on further expansion of the rail network, we are of the view that planning for bus transit is still important. This is because new housing estates such as Tengah and upcoming Paya Lebar and Southern Waterfront housing estates are being built and these new residential estates would change the demand and supply of commuters and eventually alter the commuter flows at the origin and destination bus stops. In addition, when commuters’ travelling decisions change, more new bus routes would need to be added, and existing bus routes would need to change. Therefore, to anticipate such changes, the ability to predict demand at various origin and destination bus stops during different times of the day is important. With this in mind, we will be focusing on bus commuter flows for this study.
 
@@ -53,9 +54,9 @@ Our proposed study can provide value in four-folds:
 
 ## Preliminary Literature Review
 
-### Theories Explaining Human Commuting Patterns 
+### Theories Explaining Human Commuting Patterns
 
-#### Intervening Opportunities Model 
+#### Intervening Opportunities Model
 
 @stouffer_intervening_1940 proposed a conceptual framework that rather than distance, it is the number of intervening opportunities or the cumulative number of opportunities between the origin and destination that determines migration. In the Intervening Opportunities (IO) model proposed by [@stouffer_intervening_1940], the number of persons going a given distance is directly proportional to the number of opportunities at that distance and inversely proportional to the number of intervening opportunities.
 
@@ -78,7 +79,7 @@ Where $O_i$ is the total number of trips originating from $i$ and the second ter
 
 The gravity and the IO models had been compared in various studies, showing that in general, both models performed comparably [@barbosa_human_2018]. Despite relatively good performances, the IO model was less popular, which is mainly due to the lack of research effort into the implementation and calibration of the model.
 
-#### Gravity Model 
+#### Gravity Model
 
 As cited by @barbosa_human_2018, @zipf_p_1946 proposed an equation to calculate mobility flows inspired by Newton's law of gravitation and highlighted the importance of distance in human migration patterns where the magnitude $T_{ij}$ of a migratory flow between two communities $i$ and $j$ can be approximated by the following equation:
 
@@ -108,7 +109,7 @@ The optimal form of the distance function $f(r_{ij})$ may change based on the pu
 
 However, the gravity model simplifies travel flows and is unable to capture actual empirical observations [@barbosa_human_2018]. The gravity model also requires calibration of several free parameters, which make it sensitive to fluctuations or incompleteness in data [@barbosa_human_2018]. Some of the limitations in the gravity model can be addressed using certain constrained versions. For example, the number of people originating from location $i$ ($O_i$) can be constrained, resulting it in a singly-constrained gravity model. When both the number of people originating from location $i$ and the number of travellers arriving at destination $j$ ($D_j$) are constrained, it gives rise to a doubly-constrained gravity model.
 
-#### Radiation Model 
+#### Radiation Model
 
 Arising from the IO model, the radiation model assumes that the choice of a traveler's destination consists of two steps: (1) each opportunity in every location is assigned a fitness represented by a number, $z$, chosen from some distribution $p(z)$, whose value represents the quality of the opportunity for the traveler, and (2) the traveler ranks all opportunities according to their distances from the origin location and chooses the closest opportunity with a fitness higher than the traveler's fitness threshold, which is another random number extracted from the fitness distribution $p(z)$ [@barbosa_human_2018]. As a result, the average number of travelers from location $i$ to location $j$, $T_{ij}$, takes the form:
 
@@ -120,19 +121,19 @@ The destination of the $O_i$ trips originating in $i$ is sampled from a distribu
 
 For this project, we are interested in the calibration of gravity models. While gravity models simplify travel flows, there are more past studies done on gravity models as compared to the other models. In addition, @lenormand_systematic_2016 compared the performance of the gravity model, radiation model and Schneider’s IO model and found that the gravity approach not only outperforms the other models when it comes to estimating the commuting flows but also best preserves the commuting network structure and the fit of the commuting distance distribution.
 
-### Methods for Calibrating Gravity Models 
+### Methods for Calibrating Gravity Models
 
 According to @openshaw_theoretical_1975, as cited by @wolf_spatial_2024, calibration is the process of providing estimates of the unknown parameters we have identified as the independent variables of the gravity model. For example, in a basic gravity model, we would need to estimate the origin mass, destination mass and a parameter determining the frictional effect of spatial separation between origins and destinations.
 
-#### Statistical Methods 
+#### Statistical Methods
 
 Regression is one of the commonly used statistical methods to calibrate gravity models [@oshan_spatial_2022]. To calibrate an unconstrained gravity model using regression, it can be transformed into a linear format by taking logarithms of both sides of the equation, which gives us the log-linear gravity model. This model can be expressed as a log-normal regression specification and included within an ordinary least-squares regression specification [@fotheringham_spatial_1989]; [@oshan_spatial_2022]. Some studies also proposed to use Poisson regression for gravity models instead of ordinary least squares regression because flows are usually counts of people or objects, and hence should be modeled as discrete entities, and Poisson regression also avoids the potential issues of taking the logarithm of zero-valued flows [@oshan_spatial_2022]. Other statistical methods to calibrate gravity models include negative binomial distribution or zero-inflated extension to overcome the weaknesses of Poisson models, which are vulnerable to excessive zero flows and overdispersion. However, studies found that statistical methods are unable to account for nonlinearities and other irregularities in data, which could weaken the predictive ability of these models. Statistical methods assumed that origin-destination (OD) flows are normally distributed, but in reality, OD flows are usually not distributed normally and contain a large number of zero flows, resulting a sparse matrix, which make it incompatible with statistical methods such as ordinary least squares regression [@yeghikyan_learning_2020].
 
-#### Machine Learning Based Methods 
+#### Machine Learning Based Methods
 
 Increasingly, there are studies that make use of machine learning based methods to calibrate gravity models and found that these methods performed better than statistical models. Examples of machine learning methods include decision trees, random forests, Support Vector Machines, and neural networks. For example, @ding_predicting_2016 improved the predictions for short term subway ridership by using Gradient Boosting decision trees to capture the associations with the independent variables. Their study found that gradient boosting approach can incorporate different types of predictors, fix complex nonlinear relationships, and handle the multicollinearity effect with high accuracy. @pourebrahim_trip_2019 found that with the integration of traditional and social media data, as compared to traditional gravity and artificial neural network models, the random forest model the highest $R^2$ and lowest Mean Squared Error (MSE) when it comes to modelling trip distributions. @chen_use_2011 made use of Least Squares Support Vector Machine (LS-SVM) to predict passenger flows for certain bus routes in Changchun and found that the predicted flow and actual flow had little difference and the majority of the equal coefficients of a training set are larger than 0.90, which shows the validity of the approach in using LS-SVM. @kusonkhum_using_2022 found that as compared to random forests and decision tree, artificial neural network has a higher predictive accuracy when it comes to predicting metro passenger demand over time. @simini_deep_2021 proposed Deep Gravity, which is a model to generate flow probabilities that exploits various features extracted from voluntary geographic data (such as land use, transport facilities) and uses deep neural networks to discover non-linear relationships between those features and mobility flows. They found that as compared to classic gravity models, and models that do not use deep neural networks or geographic data, Deep Gravity performed better with good generalization capability and generated realistic flows.
 
-#### Geographically Weighted Methods 
+#### Geographically Weighted Methods
 
 While machine learning methods have relatively better performance in solving nonlinear problems, they assume that data points are independent and identically distributed, which are usually not valid for spatial data [@yang_geographically_2023]. These machine learning methods do not address spatial heterogeneity that these geospatial data possess. Studies have attempted to factor spatial heterogeneity in the machine learning models and found that those models that take in the spatial aspects gave better performance. For example, @georganos_geographical_2021 found that geographical random forest outperformed a globally specified random forest with more accurate predictions. Another study by @yang_geographically_2023 also found that when geographically weighted regression (GWR) was integrated with support vector machine, the resultant model was found to have better prediction accuracy than using GWR model, and support vector regression model separately. @hagenauer_geographically_2022 proposed a geographically weighted artificial neural netwrok, which combines geographical weighting with an artificial neural network, and found that geographically weighted artificial neural network (GWANN) had better predictive performance than GWR when the relationships within the data are nonlinear and their spatial variance is high.
 
@@ -140,7 +141,7 @@ Outside of transportation studies on commuter flows, there are studies done usin
 
 ## Research Design and Methods {#sec-data-methods}
 
-### Data 
+### Data
 
 For this project, we will use data from LTA Datamall, Department of Statistics, Singapore, and Data.gov.sg. 
 
@@ -150,7 +151,7 @@ For this project, we will use data from LTA Datamall, Department of Statistics, 
 
 -   [Office Location Data]{.underline}. As there are no public dataset on the number of offices in Singapore, we will use a ACRA’s information on corporate entities datasets to get an estimate of the number of offices located in Singapore. ACRA has split the corporate entities by the letter that they start with, there are 27 files containing corporate entities that start from letter ‘A’ to ‘Z’ and others. This dataset has 53 fields, and we are interested in the *Postal Code* field which can give us the geographical location of these corporate entities. To get the geographical location of these corporate entities, we will need to combine all the 27 files, then use the Postal Code in the dataset and OneMap’s API to get the point coordinates of all the corporate entities in Singapore.
 
-### Methods and R Packages 
+### Methods and R Packages
 
 For this capstone project, we will gather, pre-process and wrangle the data collected from various open-source websites which includes LTA datamall, data.gov.sg and Singapore Department of Statistics. Thereafter, we will analyse the bus commuter flows on weekday morning peak hours from 6am to 9am and examine the key variables the affect commuter movements, such as population density, distribution of employment and transportation infrastructure. Next, we will develop and calibrate gravity models using (1) non-spatial statistical methods such as ordinary least squares regression, Poisson regression, negative binomial distribution, (2) spatial statistical methods such as geographical weighted regression, geographical weighted Poisson regression, geographical weighted negative binomial, (3) non-spatial machine learning methods such as decision trees, random forests, artificial neural networks, and (4) spatial machine learning methods such as geographically weighted random forests, geographically weighted artificial neural networks. Then we will use these calibrated models to predict the commuter flows, compare the predicted flows with actual flows, and evaluate the differences when non-spatial and spatial approaches are applied in statistical and machine learning methods.
 
@@ -166,7 +167,7 @@ For this project, the following R packages would be used:
 
 -   spatialML: to implement a spatial extension of random forest.
 
--    spatialRF: for automatic generation and selection of spatial predictors for spatial regression with Random Forest.
+-   spatialRF: for automatic generation and selection of spatial predictors for spatial regression with Random Forest.
 
 -   gwann: to implement geographically weighted artificial neural network.
 

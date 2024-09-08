@@ -1,0 +1,53 @@
+---
+title: "Exploring the Data - Bus Stops"
+author: "Goh Si Hui"
+date: "Sep 8 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+
+# Getting Started 
+
+```{r}
+pacman::p_load(tmap, sf, DT, stplanr, tidyverse)
+```
+# Importing the Data 
+
+## Passenger Volume by Origin Destination Bus Stops 
+
+::: {.panel-tabset}
+
+## Apr 2024  
+
+```{r}
+odbus_apr <- read_csv("data/aspatial/origin_destination_bus_202404.csv")
+```
+
+## May 2024 
+
+```{r}
+odbus_may <- read_csv("data/aspatial/origin_destination_bus_202405.csv")
+```
+
+## Jun 2024
+
+```{r}
+odbus_jun <- read_csv("data/aspatial/origin_destination_bus_202406.csv")
+```
+::: 
+
+Checkignn the data 
+
+:::{.panel-tabset}
+## Apr 2024 
+
+## May 2024
+
+## Jun 2024
+
+::::
