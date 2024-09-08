@@ -139,7 +139,7 @@ While machine learning methods have relatively better performance in solving non
 
 Outside of transportation studies on commuter flows, there are studies done using geographically weighted deep neural networks (GWDNN) to determine the down dead wood volume, which is crucial for sustaining forest management and predicting dynamic changes in forest resources and assessing the risks of natural disasters or disturbances. The study by @sun_geographically_2021 found that GWDNN model was far more superior as compared to an ordinary least squares model, a linear mixed moodel, a GWR model and a deep neural network model. In another study by [@siqi_novel_2023], they used a hybrid technique by combining GWR and deep neural network to predict land surface temperature and found that this hybrid technique performed best in terms of model fitness and prediction error, as compared to ordinary least squares model, GWR, and deep neural network.
 
-## Research Design and Methods {#sec-data-methods}
+## Research Design and Methods 
 
 ### Data
 
@@ -150,6 +150,7 @@ For this project, we will use data from LTA Datamall, Department of Statistics, 
 -   [Population Data]{.underline}. To find out the number of people residing at the origins and destinations, we will use the “Singapore Residents by Planning Area/subzone, Single year of age and sex, Jun 2023” dataset from Singapore Department of Statistics. This dataset contains 6 fields: *Planning Area* (e.g. “Ang Mo Kio”), *Subzone* (e.g. “Ang Mo Kio Town Centre”), *Age*, *Sex*, *Population*, and *Time* (i.e. 2023, which is the year of the data being collected). As this dataset provides information on the number of Singapore residents staying at the various planning area and subzones, rather than the exact address, the Passenger Volume by Bus Stops needed to join with the subzone boundary data of URA Master Plan 2019 which contains the information on the planning area and subzone, to know the bus stops are in which planning area and subzone.
 
 -   [Office Location Data]{.underline}. As there are no public dataset on the number of offices in Singapore, we will use a ACRA’s information on corporate entities datasets to get an estimate of the number of offices located in Singapore. ACRA has split the corporate entities by the letter that they start with, there are 27 files containing corporate entities that start from letter ‘A’ to ‘Z’ and others. This dataset has 53 fields, and we are interested in the *Postal Code* field which can give us the geographical location of these corporate entities. To get the geographical location of these corporate entities, we will need to combine all the 27 files, then use the Postal Code in the dataset and OneMap’s API to get the point coordinates of all the corporate entities in Singapore.
+
 
 ### Methods and R Packages
 

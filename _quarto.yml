@@ -14,4 +14,7 @@ format:
   agu-pdf: default
 
 
-
+manuscript:
+  notebooks:
+    - notebook: notebooks/explore-busstops.qmd
+      title: Exploring Bus Stop Data

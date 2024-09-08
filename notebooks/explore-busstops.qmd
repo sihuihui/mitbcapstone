@@ -41,7 +41,7 @@ odbus_jun <- read_csv("data/aspatial/origin_destination_bus_202406.csv")
 ```
 ::: 
 
-Checkignn the data 
+Checking the data 
 
 :::{.panel-tabset}
 ## Apr 2024 
