@@ -1,0 +1,175 @@
+---
+title: "Exploring the Data - Bus Stops"
+author: "Goh Si Hui"
+date: "Sep 15 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+
+# Getting Started 
+## Installing and Loading the R packages 
+```{r}
+
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
+```
+
+## Data 
+
+Bus stop locations 
+
+```{r}
+
+busstop_sf <- st_read(dsn = "data/spatial",
+                   layer = "BusStop") %>%
+  st_transform(crs = 3414)
+
+```
+
+```{r}
+sg_sf <- st_read("data/spatial/NationalMapPolygon.kml")%>%
+  st_transform(crs = 3414)
+
+```
+```{r}
+tmap_options(check.and.fix = TRUE)
+tm_shape(sg_sf) + 
+  tm_polygons() 
+```
+
+```{r}
+mpsz_sf <- st_read(dsn = "data/spatial",
+                layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+
+
+```
+```{r}
+tmap_options(check.and.fix = TRUE)
+qtm(mpsz_sf)
+```
+
+```{r}
+sg_sf <- mpsz_sf %>%
+  st_union()
+
+```
+
+```{r}
+qtm(sg_sf)
+
+```
+
+
+```{r}
+
+tm_shape(mpsz_sf) + 
+  tm_polygons() +
+  tm_shape(busstop_sf) + 
+  tm_dots()
+
+```
+
+
+```{r}
+tmap_mode("view")
+tm_shape(busstop_sf) + 
+  tm_dots() 
+tmap_mode("plot")
+
+```
+
+## Converting sf format to ppp format 
+```{r}
+
+busstop_ppp <- as.ppp(busstop_sf)
+plot(busstop_ppp)
+```
+
+
+```{r}
+summary(busstop_ppp)
+
+
+```
+
+## Removing Duplicated Points 
+
+```{r}
+any(duplicated(busstop_ppp))
+
+```
+
+```{r}
+multiplicity(busstop_ppp)
+
+```
+
+```{r}
+sum(multiplicity(busstop_ppp) > 1)
+
+```
+
+```{r}
+busstop_ppp_jit <- rjitter(busstop_ppp, 
+                             retry=TRUE, 
+                             nsim=1, 
+                             drop=TRUE)
+
+```
+
+```{r}
+any(duplicated(busstop_ppp_jit))
+
+```
+
+
+## Creating owin object
+
+```{r}
+sg_owin <- as.owin(sg_sf)
+plot(sg_owin)
+```
+
+```{r}
+summary(sg_owin)
+```
+
+
+## Combining point event objects and owin object
+
+```{r}
+busstopSG_ppp <- busstop_ppp[sg_owin]
+
+```
+
+```{r}
+summary(busstopSG_ppp)
+
+```
+
+```{r}
+plot(busstopSG_ppp)
+```
+
+```{r}
+busstopSG_ppp.km <- rescale.ppp(busstopSG_ppp, 
+                                  1000, 
+                                  "km")
+
+```
+
+```{r}
+plot(busstopSG_ppp.km)
+```
+
+```{r}
+kde_busstopSG_adaptive <- adaptive.density(
+  busstopSG_ppp.km, 
+  method="kernel")
+plot(kde_busstopSG_adaptive)
+```
