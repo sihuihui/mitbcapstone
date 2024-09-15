@@ -16,5 +16,8 @@ format:
 
 manuscript:
   notebooks:
+    - notebook: notebooks/explore-bslocations.qmd
+      title: Exploring Bus Stop Locations
+
     - notebook: notebooks/explore-busstops.qmd
-      title: Exploring Bus Stop Data
+      title: Exploring Origin - Destination Bus Stops Flows
