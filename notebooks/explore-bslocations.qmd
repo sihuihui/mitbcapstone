@@ -1,5 +1,5 @@
 ---
-title: "Exploring the Data - Bus Stops"
+title: "Exploring the Data - Spatial Point Analysis of Bus Stop Locations"
 author: "Goh Si Hui"
 date: "Sep 15 2024"
 date-modified: "last-modified"
