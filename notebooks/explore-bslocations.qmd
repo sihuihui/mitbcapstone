@@ -15,7 +15,7 @@ execute:
 ## Installing and Loading the R packages 
 ```{r}
 
-pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse, maptools)
 ```
 
 ## Data 
@@ -187,7 +187,7 @@ kde_busstopSG_bw <- density(busstopSG_ppp.km,
 
 
 ```{r}
-plot(kde_busstopSG_bw)
+plot(kde_busstopSG_bw, main = "Fixed Bandwith Method")
 
 ```
 
@@ -254,13 +254,102 @@ plot(density(busstopSG_ppp.km,
 
 # Fixed and Adaptive KDE
 
+## Computing KDE using fixed bandwith 
 
+define a bandwidth of 600 metre. 
+
+```{r}
+kde_busstopSG_600 <- density(busstopSG_ppp.km,
+                             sigma = 0.6,
+                             edge = TRUE, 
+                             kernel = "gaussian")
+plot(kde_busstopSG_600)
+```
+## Computing KDE with adaptive bandwidth 
 
 ```{r}
 kde_busstopSG_adaptive <- adaptive.density(
   busstopSG_ppp.km, 
   method="kernel")
+
 plot(kde_busstopSG_adaptive)
 ```
 
+
+Comparing the fixed and adaptive kernel density estimation outputs 
+
+```{r}
+par(mfrow=c(1,2))
+plot(kde_busstopSG_adaptive, main = "Adaptive Bandwidth")
+plot(kde_busstopSG_bw, main = "Fixed Bandwith")
+```
+
+## Converting KDE Output into grid object 
+
+Purpose: to make the KDE output suitable for mapping purposes
+
+```{r}
+gridded_kde_busstopSG_bw <- as.SpatialGridDataFrame.im(kde_busstopSG_bw)
+spplot(gridded_kde_busstopSG_bw)
+
+```
+
+### Converting gridded output into raster 
+
+```{r}
+kde_busstopSG_raster <- raster(kde_busstopSG_bw)
+kde_busstopSG_raster
+```
+### Assigning Projection Systems
+
+```{r}
+projection(kde_busstopSG_raster) <-CRS("+init=EPSG:3414")
+kde_busstopSG_raster
+
+```
+
+### Visualising the output in tmap
+
+```{r}
+tm_shape(kde_busstopSG_raster) +
+  tm_raster("layer", palette = "viridis") +
+  tm_layout(legend.position = c("right", "bottom"), frame = FALSE)
+
+```
+## Comparing Spatial Point Patterns using KDE
+
+### Extracting Study Area 
+
+```{r}
+je <- mpsz_sf %>%
+  filter(PLN_AREA_N == "JURONG EAST")
+
+cck <- mpsz_sf %>%
+  filter(PLN_AREA_N == "CHOA CHU KANG")
+
+wd <- mpsz_sf %>%
+  filter(PLN_AREA_N == "WOODLANDS")
+
+sk <- mpsz_sf %>%
+  filter(PLN_AREA_N == "SENGKANG")
+```
+
+```{r}
+
+par(mfrow=c(2,2))
+plot(je, main = "Jurong East")
+
+```
+
+### Creating owin object
+
+```{r}
+je_owin = as.owin(je)
+cck_owin = as.owin(cck)
+wd_owin = as.owin(wd)
+sk_owin = as.owin(sk)
+
+```
+
+### Combine busstop points and study area 
 
