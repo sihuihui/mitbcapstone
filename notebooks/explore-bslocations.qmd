@@ -20,7 +20,7 @@ pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
 
 ## Data 
 
-Bus stop locations 
+### Bus stop locations (Points)
 
 ```{r}
 
@@ -29,7 +29,7 @@ busstop_sf <- st_read(dsn = "data/spatial",
   st_transform(crs = 3414)
 
 ```
-
+### Map of Singapore (Polygon) 
 ```{r}
 sg_sf <- st_read("data/spatial/NationalMapPolygon.kml")%>%
   st_transform(crs = 3414)
@@ -40,7 +40,7 @@ tmap_options(check.and.fix = TRUE)
 tm_shape(sg_sf) + 
   tm_polygons() 
 ```
-
+### Singapore Master Plan Subzone 2019 
 ```{r}
 mpsz_sf <- st_read(dsn = "data/spatial",
                 layer = "MPSZ-2019") %>%
@@ -82,6 +82,8 @@ tm_shape(busstop_sf) +
 tmap_mode("plot")
 
 ```
+
+#Geospatial Data Wrangling 
 
 ## Converting sf format to ppp format 
 ```{r}
@@ -156,6 +158,7 @@ summary(busstopSG_ppp)
 plot(busstopSG_ppp)
 ```
 
+rescale from metres to kilometres
 ```{r}
 busstopSG_ppp.km <- rescale.ppp(busstopSG_ppp, 
                                   1000, 
@@ -167,9 +170,97 @@ busstopSG_ppp.km <- rescale.ppp(busstopSG_ppp,
 plot(busstopSG_ppp.km)
 ```
 
+# First-order Spatial Point Pattern Analysis 
+
+## Kernel Density Estimation 
+we will compute the kernel density estimation (KDE) of bus stops in Singapore
+
+### Computing KDE using Automatic Bandwidth Selection Method 
+
+```{r}
+kde_busstopSG_bw <- density(busstopSG_ppp.km,
+                            sigma=bw.diggle,
+                            edge=TRUE,
+                            kernel = "gaussian")
+
+```
+
+
+```{r}
+plot(kde_busstopSG_bw)
+
+```
+
+To retrieve the bandwidth used to compute the kde layer: 
+
+```{r}
+bw <- bw.diggle(busstopSG_ppp.km)
+bw
+```
+### Working with different automatic bandwidth methods 
+
+```{r}
+
+bw.CvL(busstopSG_ppp.km)
+```
+```{r}
+bw.scott(busstopSG_ppp.km)
+
+```
+```{r}
+bw.ppl(busstopSG_ppp.km)
+```
+```{r}
+kde_busstopSG_ppl <- density(busstopSG_ppp.km,
+                             sigma=bw.ppl,
+                             edge=TRUE,
+                             kernel = "gaussian")
+
+par(mfrow = c(1,2))
+plot(kde_busstopSG_bw, main = "bw.diggle")
+plot(kde_busstopSG_ppl, main = "bw.ppl")
+
+
+```
+### Working with different kernel methods 
+
+```{r}
+par(mfrow=c(2,2))
+
+plot(density(busstopSG_ppp.km,
+             sigma=bw.ppl,
+             edge=TRUE,
+             kernel = "gaussian"),
+     main="Gaussian")
+
+plot(density(busstopSG_ppp.km,
+             sigma=bw.ppl,
+             edge=TRUE,
+             kernel = "epanechnikov"),
+     main="Epanechnikov")
+
+plot(density(busstopSG_ppp.km,
+             sigma=bw.ppl,
+             edge=TRUE,
+             kernel = "quartic"),
+     main="Quartic")
+plot(density(busstopSG_ppp.km,
+             sigma=bw.ppl,
+             edge=TRUE,
+             kernel = "disc"),
+     main="Disc")
+
+```
+
+# Fixed and Adaptive KDE
+
+
+
 ```{r}
 kde_busstopSG_adaptive <- adaptive.density(
   busstopSG_ppp.km, 
   method="kernel")
 plot(kde_busstopSG_adaptive)
 ```
+
+
