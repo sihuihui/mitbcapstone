@@ -1,0 +1,322 @@
+---
+title: "ESDA Bus Stops"
+author: "Goh Si hui"
+date: "Oct 12 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+# Intent of this notebook 
+
+Apply appropriate spatial statistical methods to 
+- discover if bus stops are even distributed geographically. 
+- find out if there are any sign of spatial clusterings, and if yes, where are these clusters. 
+
+# Setting up the environment 
+
+## Packages 
+```{r}
+pacman::p_load(sf, spdep, tmap, tidyverse, knitr)
+```
+
+## Import data 
+
+### bus stop locations 
+```{r}
+
+busstops<- st_read(dsn = "data/spatial",
+                   layer = "BusStop") %>%
+  st_transform(crs = 3414)
+
+```
+
+```{r}
+glimpse(busstops)
+```
+
+## Hexagon layer 
+
+```{r}
+
+mpsz <-st_read(dsn = "data/spatial",
+               layer = "MPSZ-2019") %>% 
+  st_transform(crs = 3414)
+
+```
+
+hexagon grid with 400m from 1 edge to the opposite
+```{r}
+hex_layer <-
+  st_make_grid(mpsz,
+               cellsize = 400,
+               what = "polygon",
+               square = FALSE) %>%
+  st_sf()
+
+```
+
+```{r}
+tm_shape(hex_layer) +
+  tm_fill(col = "white", title = "Hexagons") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Singapore with hexagon grid",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_shape(mpsz) +
+  tm_fill("green", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(busstops) +
+  tm_dots(col = "red", size = 0.005, title = "Bus Stops")
+
+```
+```{r}
+hex_layer$n_busstops = lengths(st_intersects(hex_layer, busstops))
+hex_layer <- filter(hex_layer, n_busstops > 0)
+
+```
+
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill("green", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(hex_layer) +
+  tm_fill(col = "white", title = "Hexagons", alpha = 1) +
+  tm_borders(alpha = 0.2) +
+  tm_layout(main.title = "Hexagon grid corresponding to Singapore bus stops",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_shape(busstops) +
+  tm_dots(col = "red", size = 0.001, title = "Bus Stops") +
+  tm_grid(alpha = 0.2)
+
+```
+
+assign ids to hexagon cell 
+```{r}
+head(hex_layer)
+```
+
+
+```{r}
+hex_layer$hex_id <- sprintf("H%04d", seq_len(nrow(hex_layer))) %>% as.factor()
+head(hex_layer)
+
+```
+
+
+### passenger trips 
+
+```{r}
+apr_od<- read_csv("data/aspatial/origin_destination_bus_202404.csv")
+```
+
+```{r}
+glimpse(apr_od)
+```
+
+# Data Wrangling of Aspatial Data 
+
+Need to process the od trips data 
+
+## data type 
+convert from character to factor data type. 
+
+```{r}
+apr_od$ORIGIN_PT_CODE <- as.factor(apr_od$ORIGIN_PT_CODE)
+apr_od$DESTINATION_PT_CODE <- as.factor(apr_od$DESTINATION_PT_CODE)
+
+```
+Check the data again 
+```{r}
+glimpse(apr_od)
+```
+
+## other data checks 
+
+::: {.panel-tabset}
+
+## YEAR_MONTH
+```{r}
+unique(apr_od$YEAR_MONTH)
+
+```
+
+## DAY_TYPE
+```{r}
+unique(apr_od$DAY_TYPE)
+
+```
+
+## TIME_PER_HOUR
+```{r}
+
+unique(apr_od$TIME_PER_HOUR)
+
+length(unique(apr_od$TIME_PER_HOUR))
+
+```
+
+## PT_TYPE
+```{r}
+unique(apr_od$PT_TYPE)
+
+```
+
+## ORIGIN_PT_CODE 
+```{r}
+length(unique(apr_od$ORIGIN_PT_CODE))
+
+```
+
+## DESTINATION_PT_CODE
+
+```{r}
+length(unique(apr_od$DESTINATION_PT_CODE))
+
+```
+:::
+
+## check for duplicates 
+
+```{r}
+duplicate <- apr_od %>%
+  group_by_all() %>%
+  filter(n()>1) %>%
+  ungroup()
+
+duplicate
+```
+## check for missing values and 0 values 
+
+
+::: {.panel-tabset}
+## Missing values 
+```{r}
+apr_od %>% 
+  map(is.na) %>%
+  map(sum)
+
+```
+## 0 Values 
+```{r}
+summary(apr_od$TOTAL_TRIPS)
+```
+:::
+
+From the above output, we know that there are no missing values and no observations with 0 trips.
+
+## Visualising the data 
+
+```{r}
+total_trips <- apr_od %>% 
+  group_by(DAY_TYPE) %>%
+  summarise(TOTAL = sum(TOTAL_TRIPS))
+  
+g_total_trips <- ggplot(total_trips) + 
+  geom_col(aes(x=DAY_TYPE, y=TOTAL)) + 
+  ggtitle('Total Passenger Trips in Apr 2024') 
+
+g_total_trips
+```
+
+```{r}
+weekday_trips <- apr_od %>% 
+  filter(DAY_TYPE == "WEEKDAY") %>%
+  group_by(TIME_PER_HOUR) %>%
+  summarise(TOTAL = sum(TOTAL_TRIPS)) 
+  
+g_weekday_trips <- ggplot(weekday_trips) + 
+  geom_col(aes(x=TIME_PER_HOUR, y=TOTAL)) + 
+  ggtitle('Weekday Passenger Trips')
+
+weekend_trips <- apr_od %>% 
+  filter(DAY_TYPE == "WEEKENDS/HOLIDAY") %>%
+  group_by(TIME_PER_HOUR) %>%
+  summarise(TOTAL = sum(TOTAL_TRIPS))
+  
+g_weekend_trips <- ggplot(weekend_trips) + 
+  geom_col(aes(x=TIME_PER_HOUR, y=TOTAL)) + 
+  ggtitle('Weekend Passenger Trips')
+
+g_weekday_trips  
+g_weekend_trips
+```
+
+```{r}
+apr_trips <- apr_od %>%
+  select(c(ORIGIN_PT_CODE, DAY_TYPE, TIME_PER_HOUR, TOTAL_TRIPS)) %>%
+  rename(BUS_STOP_N = ORIGIN_PT_CODE) 
+
+(head(apr_trips))
+
+```
+
+## Mapping bus stops to hexagon layer 
+
+hex layer only tell us the number of bus stops in each cell 
+need to associate the bus stop codes with bus stop locations. 
+
+```{r}
+bs_hex <- st_intersection(busstops, hex_layer) %>%
+  st_drop_geometry() %>%
+  select(c(BUS_STOP_N, hex_id))
+
+head(bs_hex)
+
+```
+
+```{r}
+bs_hex$BUS_STOP_N <- as.factor(bs_hex$BUS_STOP_N )
+
+```
+
+```{r}
+trips <- inner_join(apr_trips, bs_hex)
+head(trips)
+```
+
+```{r}
+trips <- trips %>%
+  group_by(
+    hex_id,
+    DAY_TYPE,
+    TIME_PER_HOUR) %>%
+  summarise(TOTAL_TRIPS = sum(TOTAL_TRIPS))
+
+head(trips)
+
+```
+
+
+## Extract Relevant Data 
+
+First, we compute the passenger trips generated by origin bus stops 
+Peak Hour Periods:
+
+- Weekday Morning Peak - 9am to 9am
+
+- Weekday Afternoon Peak - 5pm to 8pm
+
+- Weekend/holiday Morning Peak - 11am to 2pm
+
+- Weekend/holiday Evening Peak - 4pm to 7pm
+
+
+# GeoVisualisation and Analysis 
+
+# Local Indicators of Spatial Association (LISA) Analysis 
+
+# Emerging Hot Spot Analysis 

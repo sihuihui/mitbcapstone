@@ -1,0 +1,129 @@
+---
+title: "Preparing Business Data"
+author: "Goh Si Hui"
+date: "Oct 12 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+
+```{r}
+pacman::p_load(tidyverse, sf, tmap, httr, performance)
+```
+
+```{r}
+csv <- read_csv("data/aspatial/acra_data/ACRAInformationonCorporateEntitiesB.csv")
+```
+
+```{r}
+glimpse(csv)
+
+```
+
+```{r}
+unique(csv$entity_status_description)
+```
+```{r}
+unique(csv$address_type)
+```
+```{r}
+unique(csv$issuance_agency_id)
+```
+
+```{r}
+unique(csv$entity_type_description)
+```
+
+```{r}
+livecompany <- csv %>%
+  filter(entity_status_description %in% c("Live", "Live Company", "Live (Receiver or Receiver and Manager appointed)")) %>%
+  select(uen,entity_name,entity_type_description,business_constitution_description,postal_code)
+
+postcode <- livecompany$postal_code
+
+postcode2 <- str_pad(postcode, 6, pad = "0")
+head(postcode2)
+
+```
+
+```{r}
+url <- "https://onemap.gov.sg/api/common/elastic/search"
+
+found <- data.frame()
+not_found <- data.frame()
+
+for (postcode in postcode2){
+  query <- list('searchVal'=postcode, 'returnGeom'='Y', 'getAddrDetails'='Y', 'pageNum'='1')
+  res <- GET(url, query=query)
+  if ((content(res)$found)!=0){
+    found <- rbind(found, data.frame(content(res))[4:13])
+  } else {
+    not_found = data.frame(postcode)
+  }
+}
+
+
+```
+
+
+```{r}
+merged = merge(livecompany, found, by.x='postal_code', by.y = 'results.POSTAL', all = TRUE)
+write.csv(merged, file="data/aspatial/acraB.csv")
+write_csv(not_found, file ="data/aspatial/not_foundB.csv")
+
+```
+
+The above code works so we will now loop thru all the files in the folder to process the remaining 26 files 
+
+```{r}
+#verify working directory 
+
+print("Current working directory:")
+print(getwd())
+
+#list all files in the directory 
+print("All files in the directory:")
+print(list.files(path = "/data/aspatial/acra_data", full.names = TRUE))
+
+# Define the csv_files variable by listing all CSV files in the specified directory
+csv_files <- list.files(path = "C:\\Users\\GFG0307", pattern = "\\.csv$", 
+                        full.names = TRUE)
+
+print("Files to process:")
+print(csv_files)
+
+# Iterate over each file
+for (file in csv_files) {
+  print(paste("Processing file:", file))  # Print the name of the file being processed
+
+  # Read the file
+  data <- read_csv(file)
+
+  # Process the data 
+  livecompany <- data %>%
+  filter(entity_status_description %in% c("Live", "Live Company", "Live (Receiver or Receiver and Manager appointed)")) %>%
+  select(uen,entity_name,entity_type_description,business_constitution_description,postal_code)
+
+  postcodes <- str_pad(livecompany$postal_code, 6, pad = "0")
+  
+  url <- "https://onemap.gov.sg/api/common/elastic/search"
+  found <- data.frame()
+  not_found <- data.frame()
+  
+  for (postcode in postcodes){
+    query <- list('searchVal'=postcode, 'returnGeom'='Y', 'getAddrDetails'='Y', 'pageNum'='1')
+    res <- GET(url, query=query)
+    if ((content(res)$found)!=0){
+      found <- rbind(found, data.frame(content(res))[4:13])
+      } else {
+        not_found = data.frame(postcode)
+      }
+    }
+
+}
+
+```
