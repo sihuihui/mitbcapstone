@@ -327,7 +327,3 @@ Peak Hour Periods:
 
 ## time series cube
 
-```{r}
-
-
-```
