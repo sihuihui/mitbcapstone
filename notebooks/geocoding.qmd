@@ -52,6 +52,7 @@ head(postcode2)
 ```
 
 ```{r}
+
 url <- "https://onemap.gov.sg/api/common/elastic/search"
 
 found <- data.frame()
