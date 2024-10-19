@@ -9,6 +9,7 @@ execute:
   message: false
   warning: false
   freeze: true
+  code-line-numbers: true
 ---
 # Intent of this notebook 
 
@@ -65,7 +66,7 @@ tm_shape(hex_layer) +
   tm_borders(alpha = 0.5) +
   tm_layout(main.title = "Singapore with hexagon grid",
             main.title.position = "center",
-            main.title.size = 1.0,
+            main.title.size = 0.7,
             legend.height = 0.35, 
             legend.width = 0.35,
             frame = TRUE) +
