@@ -21,3 +21,7 @@ manuscript:
 
     - notebook: notebooks/explore-busstops.qmd
       title: Exploring Origin - Destination Bus Stops Flows
+      
+    - notebook: notebooks/esda-busstops.qmd
+      title: Exploratory Data Analysis for Bus Stop Locations 
+
