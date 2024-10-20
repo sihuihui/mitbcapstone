@@ -21,7 +21,7 @@ Apply appropriate spatial statistical methods to
 
 ## Packages 
 ```{r}
-pacman::p_load(sf, spdep, tmap, tidyverse, knitr)
+pacman::p_load(sf, sfdep, tmap, tidyverse, knitr)
 ```
 
 ## Import data 
@@ -73,21 +73,30 @@ tm_shape(hex_layer) +
   tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
   tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
   tm_shape(mpsz) +
-  tm_fill("green", title = "Singapore Boundary", alpha = 0.5) +
+  tm_fill("lawngreen", title = "Singapore Boundary", alpha = 0.5) +
   tm_shape(busstops) +
-  tm_dots(col = "red", size = 0.005, title = "Bus Stops")
+  tm_dots(col = "firebrick", size = 0.005, title = "Bus Stops")
 
 ```
+filter out busstops outside of singapore 
+```{r}
+busstops$bs_sg = lengths(st_intersects(busstops, mpsz))
+busstops <- filter(busstops, bs_sg > 0) %>%
+  select(, -bs_sg)
+  
+busstops
+```
+
+
 ```{r}
 hex_layer$n_busstops = lengths(st_intersects(hex_layer, busstops))
-hex_layer <- filter(hex_layer, n_busstops > 0)
-
+hex_layer <- filter(hex_layer, n_busstops > 0) 
 ```
 
 
 ```{r}
 tm_shape(mpsz) +
-  tm_fill("green", title = "Singapore Boundary", alpha = 0.5) +
+  tm_fill("lawngreen", title = "Singapore Boundary", alpha = 0.5) +
   tm_shape(hex_layer) +
   tm_fill(col = "white", title = "Hexagons", alpha = 1) +
   tm_borders(alpha = 0.2) +
@@ -100,12 +109,13 @@ tm_shape(mpsz) +
   tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
   tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
   tm_shape(busstops) +
-  tm_dots(col = "red", size = 0.001, title = "Bus Stops") +
+  tm_dots(col = "firebrick", size = 0.001, title = "Bus Stops") +
   tm_grid(alpha = 0.2)
 
 ```
 
 assign ids to hexagon cell 
+
 ```{r}
 head(hex_layer)
 ```
@@ -284,13 +294,22 @@ bs_hex$BUS_STOP_N <- as.factor(bs_hex$BUS_STOP_N )
 
 ```
 
+
+```{r}
+bs_hex_sf <- st_intersection(busstops, hex_layer) %>%
+  select(c(BUS_STOP_N, hex_id))
+
+head(bs_hex_sf)
+
+```
+
 ## Number of trips per hexagon cell 
 
 ```{r}
 trips <- inner_join(apr_trips, bs_hex)
 head(trips)
 ```
-
+Aggregate trips based on hex id 
 ```{r}
 trips <- trips %>%
   group_by(
@@ -302,7 +321,95 @@ trips <- trips %>%
 head(trips)
 
 ```
+# Creating Space Time cube 
+```{r}
+spacetime(trips, hex_layer,
+          .loc_col = "hex_id",
+          .time_col = "TIME_PER_HOUR") %>%
+  is_spacetime_cube()
 
+```
+
+
+```{r}
+combos <- expand_grid(
+  hex_id= hex_layer$hex_id,
+  TIME_PER_HOUR = 0:23
+)
+
+```
+
+Split the trips into weekdays and weekends since we are gonna analyse between weekdays and weekends. 
+
+```{r}
+wkd_trips <- trips %>%
+  filter(DAY_TYPE == "WEEKDAY") %>%
+  ungroup() %>%
+  select(, -DAY_TYPE)
+```
+
+```{r}
+wke_trips <- trips %>%
+  filter(DAY_TYPE == "WEEKENDS/HOLIDAY") %>%
+  ungroup() %>%
+  select(, -DAY_TYPE)
+```
+
+```{r}
+nrow(wkd_trips) + nrow(wke_trips) == nrow(trips)
+```
+
+```{r}
+wkd_trips_cube <- left_join(combos, wkd_trips)
+head(wkd_trips_cube, 24)
+```
+
+
+```{r}
+wke_trips_cube <- left_join(combos, wke_trips)
+head(wke_trips_cube, 24)
+
+```
+
+```{r}
+nrow(wkd_trips_cube) == nrow(combos)
+```
+
+```{r}
+nrow(wke_trips_cube) == nrow(combos)
+```
+
+filling in missing values in the cubes
+
+```{r}
+wkd_trips_cube$TOTAL_TRIPS[is.na(wkd_trips_cube$TOTAL_TRIPS)] <- 0
+head(wkd_trips_cube, 24)
+```
+
+```{r}
+wke_trips_cube$TOTAL_TRIPS[is.na(wke_trips_cube$TOTAL_TRIPS)] <- 0
+head(wke_trips_cube, 24)
+```
+
+Check if the data is time series cube friendly 
+
+```{r}
+spacetime(wkd_trips_cube, hex_layer,
+          .loc_col = "hex_id",
+          .time_col = "TIME_PER_HOUR") %>%
+  is_spacetime_cube()
+          
+
+```
+
+```{r}
+spacetime(wke_trips_cube, hex_layer,
+          .loc_col = "hex_id",
+          .time_col = "TIME_PER_HOUR") %>%
+  is_spacetime_cube()
+          
+
+```
 
 
 # GeoVisualisation and Analysis 
@@ -319,12 +426,939 @@ Peak Hour Periods:
 
 - Weekend/holiday Evening Peak - 4pm to 7pm
 
+::: {.panel-tabset}
+
+## Weekday Morning Peak 
+
+```{r}
+peak_trips_sf <- hex_layer
+
+peak_trips_sf <- wkd_trips_cube %>%
+  filter(TIME_PER_HOUR >= 6 &
+           TIME_PER_HOUR < 9) %>%
+  group_by(hex_id) %>%
+  summarise(weekday_am_trips = sum(TOTAL_TRIPS)) %>%
+  right_join(peak_trips_sf)
+
+head(peak_trips_sf)
+  
+
+```
 
 
+## Weekday Afternoon Peak 
+
+```{r}
+
+peak_trips_sf <- wkd_trips_cube %>%
+  filter(TIME_PER_HOUR >= 17 &
+           TIME_PER_HOUR < 20) %>%
+  group_by(hex_id) %>%
+  summarise(weekday_pm_trips = sum(TOTAL_TRIPS)) %>%
+  right_join(peak_trips_sf)
+
+head(peak_trips_sf)
+  
+```
+
+## Weekend/holiday Morning Peak 
+
+```{r}
+
+peak_trips_sf <- wke_trips_cube %>%
+  filter(TIME_PER_HOUR >= 11 &
+           TIME_PER_HOUR < 14) %>%
+  group_by(hex_id) %>%
+  summarise(weekend_am_trips = sum(TOTAL_TRIPS)) %>%
+  right_join(peak_trips_sf)
+
+head(peak_trips_sf)
+  
+```
+
+## Weekend/holiday Afternoon Peak 
+
+```{r}
+
+peak_trips_sf <- wke_trips_cube %>%
+  filter(TIME_PER_HOUR >= 16 &
+           TIME_PER_HOUR < 19) %>%
+  group_by(hex_id) %>%
+  summarise(weekend_pm_trips = sum(TOTAL_TRIPS)) %>%
+  right_join(peak_trips_sf)
+
+head(peak_trips_sf)
+  
+```
+
+:::
+
+## Visualising the trips 
+
+```{r}
+peak_trips_sf <- peak_trips_sf %>% st_sf()
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekday_am_trips", 
+    style = "quantile",
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips Originating from Origin Busstops (Weekdays 6 - 9 AM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekday_pm_trips", 
+    style = "quantile",
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips from Origin Busstops (Weekdays 5 - 8 PM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekend_am_trips", 
+    style = "quantile",
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips from Origin Busstops (Weekend 11 AM - 2 PM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekend_pm_trips", 
+    style = "quantile",
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips from Origin Busstops (Weekend 4 - 7 PM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+
+# Derive break points 
+
+## For weekday trips 
+since weekday trips are higher than weekends. we will have separate break points for 
+```{r}
+quantile(
+  c(peak_trips_sf$weekday_am_trips,
+    peak_trips_sf$weekday_pm_trips), 
+  probs = c(0, 0.125, 0.25, 0.375, 0.50, 0.625, 0.75, 0.875,1)
+)
+
+```
+
+```{r}
+quantile(
+  c(peak_trips_sf$weekend_am_trips,
+    peak_trips_sf$weekend_pm_trips), 
+  probs = c(0, 0.125, 0.25, 0.375, 0.50, 0.625, 0.75, 0.875,1)
+)
+
+```
+
+```{r}
+
+wkd_breaks = c(0, 232, 911, 2294, 4309, 7466, 11996, 21391, 461418)
+wke_breaks = c(0, 79, 259, 613, 1202, 2118, 3353, 5796, 110674)
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekday_am_trips", 
+    breaks = wkd_breaks,
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips from Origin Busstops (Weekdays 6 - 9 AM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekday_pm_trips", 
+    breaks = wkd_breaks,
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips from Origin Busstops (Weekdays 5 - 8 PM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekend_am_trips", 
+    breaks = wke_breaks,
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips from Origin Busstops (Weekend 11 AM - 2 PM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col = "lawngreen")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(peak_trips_sf) +
+  tm_polygons(
+    "weekend_pm_trips", 
+    breaks = wke_breaks,
+    palette = "YlOrRd",
+    title = "Number of trips"
+  ) +
+  tm_layout(
+    main.title = "Bus Trips from Origin Busstops (Weekends 4 - 7 PM)",
+    main.title.position = "center",
+    main.title.size = 0.7,
+    legend.height = 0.35, 
+    legend.width = 0.25,
+    legend.position = c("right", "bottom")
+  )+
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
 
 # Local Indicators of Spatial Association (LISA) Analysis 
 
+```{r}
+knn_6nb <- peak_trips_sf %>% 
+  st_centroid() %>%
+  st_knn(k = 6)
+
+```
+
+```{r}
+wm_knn6 <- peak_trips_sf %>%
+  mutate(
+    nb = knn_6nb,
+    #wt = st_weights(nb, style = "W")
+    wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1)
+    )
+
+```
+
+## Global Moran's I 
+
+```{r}
+
+global_moran_perm(
+  wm_knn6$weekday_am_trips,
+  wm_knn6$nb,
+  wm_knn6$wt,
+  nsim = 99
+)
+```
+
+```{r}
+
+global_moran_perm(
+  wm_knn6$weekday_pm_trips,
+  wm_knn6$nb,
+  wm_knn6$wt,
+  nsim = 99
+)
+```
+
+```{r}
+
+global_moran_perm(
+  wm_knn6$weekend_am_trips,
+  wm_knn6$nb,
+  wm_knn6$wt,
+  nsim = 99
+)
+```
+
+```{r}
+
+global_moran_perm(
+  wm_knn6$weekend_pm_trips,
+  wm_knn6$nb,
+  wm_knn6$wt,
+  nsim = 99
+)
+```
+
+All have significant p values 
+
+## Local Moran's I 
+
+```{r}
+lmi_wkd_am <- wm_knn6 %>% 
+  mutate(local_moran = local_moran(
+    weekday_am_trips, nb, wt, nsim = 99),
+         .before = 1) %>%
+  unnest(local_moran)
+```
+
+```{r}
+lmi_wkd_pm <- wm_knn6 %>% 
+  mutate(local_moran = local_moran(
+    weekday_pm_trips, nb, wt, nsim = 99),
+         .before = 1) %>%
+  unnest(local_moran)
+```
+
+```{r}
+lmi_wke_am <- wm_knn6 %>% 
+  mutate(local_moran = local_moran(
+    weekend_am_trips, nb, wt, nsim = 99),
+         .before = 1) %>%
+  unnest(local_moran)
+```
+
+```{r}
+lmi_wke_pm <- wm_knn6 %>% 
+  mutate(local_moran = local_moran(
+    weekend_pm_trips, nb, wt, nsim = 99),
+         .before = 1) %>%
+  unnest(local_moran)
+```
+
+## Plotting Local Moran's I and p-value 
+
+```{r}
+tmap_arrange(
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wkd_am) +
+      tm_polygons("ii"),
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wkd_am) +
+      tm_polygons("p_ii_sim",
+              breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig"),
+              palette = "YlOrRd"
+              ),
+    ncol = 2
+  )
+
+```
+
+```{r}
+tmap_arrange(
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wkd_pm) +
+      tm_polygons("ii"),
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wkd_pm) +
+      tm_polygons("p_ii_sim",
+              breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig"),
+              palette = "YlOrRd"
+              ),
+    ncol = 2
+  )
+
+```
+
+```{r}
+tmap_arrange(
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wke_am) +
+      tm_polygons("ii"),
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wke_am) +
+      tm_polygons("p_ii_sim",
+              breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig"),
+              palette = "YlOrRd"
+              ),
+    ncol = 2
+  )
+
+```
+
+```{r}
+tmap_arrange(
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wke_pm) +
+      tm_polygons("ii"),
+    tm_shape(mpsz) +
+      tm_fill(col="lawngreen") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_wke_pm) +
+      tm_polygons("p_ii_sim",
+              breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig"),
+              palette = "YlOrRd"
+              ),
+    ncol = 2
+  )
+
+```
+## Plotting LISA Maps 
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col="white")+
+  tm_borders(alpha = 0.7) +
+  tm_shape(lmi_wkd_am %>% filter(p_ii_sim < 0.05)) +
+  tm_polygons("mean") + 
+  tm_layout(
+    main.title = "LISA for Weekday 6 - 9 AM",
+    main.title.position = "center",
+    main.title.size = 1
+  )
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col="white")+
+  tm_borders(alpha = 0.7) +
+  tm_shape(lmi_wkd_pm %>% filter(p_ii_sim < 0.05)) +
+  tm_polygons("mean") + 
+  tm_layout(
+    main.title = "LISA for Weekday 5 - 8 PM",
+    main.title.position = "center",
+    main.title.size = 1
+  )
+```
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col="white")+
+  tm_borders(alpha = 0.7) +
+  tm_shape(lmi_wke_am %>% filter(p_ii_sim < 0.05)) +
+  tm_polygons("mean") + 
+  tm_layout(
+    main.title = "LISA for Weekend 11 AM - 2 PM",
+    main.title.position = "center",
+    main.title.size = 1
+  )
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill(col="white")+
+  tm_borders(alpha = 0.7) +
+  tm_shape(lmi_wke_pm %>% filter(p_ii_sim < 0.05)) +
+  tm_polygons("mean") + 
+  tm_layout(
+    main.title = "LISA for Weekend 4 - 7 PM",
+    main.title.position = "center",
+    main.title.size = 1
+  )
+```
+
 # Emerging Hot Spot Analysis 
 
-## time series cube
+```{r}
+head(wkd_trips_cube %>%
+       group_by(TIME_PER_HOUR) %>%
+       summarise(
+         min = min(TOTAL_TRIPS),
+         median = median(TOTAL_TRIPS),
+         max = max(TOTAL_TRIPS)), n = 24)
 
+```
+
+
+```{r}
+head(wke_trips_cube %>%
+       group_by(TIME_PER_HOUR) %>%
+       summarise(
+         min = min(TOTAL_TRIPS),
+         median = median(TOTAL_TRIPS),
+         max = max(TOTAL_TRIPS)), n = 24)
+
+```
+
+
+```{r}
+
+wkd_trips_cube_am <- wkd_trips_cube %>%
+  filter(TIME_PER_HOUR >=6 &
+           TIME_PER_HOUR < 12)
+
+
+wkd_trips_cube_pm <- wkd_trips_cube %>%
+  filter(TIME_PER_HOUR >=17 &
+           TIME_PER_HOUR < 23)
+
+```
+
+```{r}
+wke_trips_cube_am <- wke_trips_cube %>% 
+  filter(TIME_PER_HOUR >= 11 &
+           TIME_PER_HOUR < 15)
+
+wke_trips_cube_pm <- wke_trips_cube %>% 
+  filter(TIME_PER_HOUR >= 16 &
+           TIME_PER_HOUR < 20)
+
+```
+
+```{r}
+wkd_am_st <- spacetime(wkd_trips_cube_am, hex_layer,
+                        .loc_col = "hex_id",
+                        .time_col = "TIME_PER_HOUR")
+is_spacetime_cube(wkd_am_st)
+
+```
+```{r}
+wkd_pm_st <- spacetime(wkd_trips_cube_pm, hex_layer,
+                        .loc_col = "hex_id",
+                        .time_col = "TIME_PER_HOUR")
+is_spacetime_cube(wkd_pm_st)
+
+```
+
+
+```{r}
+wke_am_st <- spacetime(wke_trips_cube_am, hex_layer,
+                        .loc_col = "hex_id",
+                        .time_col = "TIME_PER_HOUR")
+is_spacetime_cube(wke_am_st)
+
+```
+
+```{r}
+wke_pm_st <- spacetime(wke_trips_cube_pm, hex_layer,
+                        .loc_col = "hex_id",
+                        .time_col = "TIME_PER_HOUR")
+is_spacetime_cube(wke_pm_st)
+
+```
+# Computing Local Gi*
+
+## Calculating Inverse Distance Weights 
+```{r}
+wkd_am_st <- wkd_am_st %>%
+  activate("geometry") %>%
+  mutate(nb = include_self(knn_6nb),
+         wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+         .before = 1) %>%
+  set_nbs("nb") %>%
+  set_wts("wt")
+kable(tail(wkd_am_st, n = 3))
+
+```
+
+```{r}
+wkd_pm_st <- wkd_pm_st %>%
+  activate("geometry") %>%
+  mutate(nb = include_self(knn_6nb),
+         wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+         .before = 1) %>%
+  set_nbs("nb") %>%
+  set_wts("wt")
+kable(tail(wkd_pm_st, n = 3))
+
+```
+
+
+```{r}
+wke_am_st <- wke_am_st %>%
+  activate("geometry") %>%
+  mutate(nb = include_self(knn_6nb),
+         wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+         .before = 1) %>%
+  set_nbs("nb") %>%
+  set_wts("wt")
+kable(tail(wke_am_st, n = 3))
+
+```
+
+```{r}
+wke_pm_st <- wke_pm_st %>%
+  activate("geometry") %>%
+  mutate(nb = include_self(knn_6nb),
+         wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+         .before = 1) %>%
+  set_nbs("nb") %>%
+  set_wts("wt")
+kable(tail(wke_pm_st, n = 3))
+
+```
+
+## Calculating local GI*  
+
+```{r}
+gi_star_wkd_am <- wkd_am_st %>% 
+  group_by(TIME_PER_HOUR) %>% 
+  mutate(gi_star = local_gstar_perm(
+    TOTAL_TRIPS, nb, wt)) %>% 
+  unnest(gi_star)
+```
+
+```{r}
+gi_star_wkd_pm <- wkd_pm_st %>% 
+  group_by(TIME_PER_HOUR) %>% 
+  mutate(gi_star = local_gstar_perm(
+    TOTAL_TRIPS, nb, wt)) %>% 
+  unnest(gi_star)
+```
+
+```{r}
+gi_star_wke_am <- wke_am_st %>% 
+  group_by(TIME_PER_HOUR) %>% 
+  mutate(gi_star = local_gstar_perm(
+    TOTAL_TRIPS, nb, wt)) %>% 
+  unnest(gi_star)
+```
+
+```{r}
+gi_star_wke_pm <- wke_pm_st %>% 
+  group_by(TIME_PER_HOUR) %>% 
+  mutate(gi_star = local_gstar_perm(
+    TOTAL_TRIPS, nb, wt)) %>% 
+  unnest(gi_star)
+```
+
+## Mann-Kendall Test 
+
+```{r}
+top5_wkd_am <- gi_star_wkd_am %>%
+  group_by(hex_id) %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>%
+  tidyr::unnest_wider(mk) %>%
+  arrange(sl, abs(tau)) %>%
+  head()
+
+ggplot(
+  data = gi_star_wkd_am %>%
+    filter(hex_id %in% top5_wkd_am$hex_id),
+  aes(x = TIME_PER_HOUR, 
+      y = gi_star,
+      group = hex_id)) +
+  geom_line(
+    aes(color=hex_id),
+    size = 1) +
+  theme_light() +
+  labs(title = "Gi* for Weekdays (6 - 9 AM)")
+```
+```{r}
+top5_wkd_pm <- gi_star_wkd_pm %>%
+  group_by(hex_id) %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>%
+  tidyr::unnest_wider(mk) %>%
+  arrange(sl, abs(tau)) %>%
+  head()
+
+ggplot(
+  data = gi_star_wkd_pm %>%
+    filter(hex_id %in% top5_wkd_pm$hex_id),
+  aes(x = TIME_PER_HOUR, 
+      y = gi_star,
+      group = hex_id)) +
+  geom_line(
+    aes(color=hex_id),
+    size = 1) +
+  theme_light() +
+  labs(title = "Gi* for Weekdays (5 - 8 PM)")
+```
+
+```{r}
+top5_wke_am <- gi_star_wke_am %>%
+  group_by(hex_id) %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>%
+  tidyr::unnest_wider(mk) %>%
+  arrange(sl, abs(tau)) %>%
+  head()
+
+ggplot(
+  data = gi_star_wke_am %>%
+    filter(hex_id %in% top5_wke_am$hex_id),
+  aes(x = TIME_PER_HOUR, 
+      y = gi_star,
+      group = hex_id)) +
+  geom_line(
+    aes(color=hex_id),
+    size = 1) +
+  theme_light() +
+  labs(title = "Gi* for Weekends (11AM - 2PM)")
+```
+
+```{r}
+top5_wke_pm <- gi_star_wke_pm %>%
+  group_by(hex_id) %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>%
+  tidyr::unnest_wider(mk) %>%
+  arrange(sl, abs(tau)) %>%
+  head()
+
+ggplot(
+  data = gi_star_wke_pm %>%
+    filter(hex_id %in% top5_wke_pm$hex_id),
+  aes(x = TIME_PER_HOUR, 
+      y = gi_star,
+      group = hex_id)) +
+  geom_line(
+    aes(color=hex_id),
+    size = 1) +
+  theme_light() +
+  labs(title = "Gi* for Weekend (4 - 7 PM)")
+```
+
+# Emerging Hot Spot Analysis 
+
+## Run simulations 
+
+```{r}
+ehsa_wkd_am <- emerging_hotspot_analysis(
+  x = wkd_am_st, 
+  .var = "TOTAL_TRIPS", 
+  k = 1, 
+  nsim = 99,
+  nb_col = "nb",
+  wt_col = "wt"
+)
+```
+
+```{r}
+ehsa_wkd_pm <- emerging_hotspot_analysis(
+  x = wkd_pm_st, 
+  .var = "TOTAL_TRIPS", 
+  k = 1, 
+  nsim = 99,
+  nb_col = "nb",
+  wt_col = "wt"
+)
+```
+
+```{r}
+ehsa_wke_am <- emerging_hotspot_analysis(
+  x = wke_am_st, 
+  .var = "TOTAL_TRIPS", 
+  k = 1, 
+  nsim = 99,
+  nb_col = "nb",
+  wt_col = "wt"
+)
+```
+
+```{r}
+ehsa_wke_pm <- emerging_hotspot_analysis(
+  x = wke_pm_st, 
+  .var = "TOTAL_TRIPS", 
+  k = 1, 
+  nsim = 99,
+  nb_col = "nb",
+  wt_col = "wt"
+)
+```
+
+
+## Visualising EHSA
+
+```{r}
+ehsa_colors <- data.frame(
+  CLASS = c(
+      "persistent coldspot", "consecutive coldspot", "intensifying coldspot",
+      "sporadic coldspot", "new coldspot", "oscillating coldspot",
+      "historical coldspot", "diminishing coldspot",
+      "no pattern detected",
+      "diminishing hotspot", "historical hotspot",
+      "oscillating hotspot", "new hotspot", "sporadic hotspot",
+      "intensifying hotspot", "consecutive hotspot", "persistent hotspot"
+    ),
+  LEVEL = -8:8
+)
+
+```
+
+
+```{r}
+ehsa_sig_wkd_am <- ehsa_wkd_am %>%
+    filter(p_value < 0.05)
+
+ehsa_sig_wkd_am <- left_join(ehsa_sig_wkd_am, hex_layer,
+              by = c('location'='hex_id')) %>%
+  left_join(ehsa_colors,
+            by = c('classification' = 'CLASS')) %>%
+    st_sf()
+
+tm_shape(mpsz) +
+  tm_polygons(col = "white") +
+tm_shape(ehsa_sig_wkd_am) +
+  tm_polygons(
+    "LEVEL",
+    palette = "-Spectral",
+    breaks = -8:9,
+    labels = ehsa_colors$CLASS,
+    title = "Legend"
+  ) +
+  tm_layout(main.title = "Hot Spots and Cold Spots (Weekdays Morning)",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.4, 
+            legend.width = 0.4,
+            legend.bg.color = "white",
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar(bg.color = "white") +
+  tm_grid(alpha = 0.2)
+
+```
+
+```{r}
+ehsa_sig_wkd_pm <- ehsa_wkd_pm %>%
+    filter(p_value < 0.05)
+
+
+ehsa_sig_wkd_pm <- left_join(ehsa_sig_wkd_pm, hex_layer,
+              by = c('location'='hex_id')) %>%
+  left_join(ehsa_colors,
+            by = c('classification' = 'CLASS')) %>%
+    st_sf()
+
+tm_shape(mpsz) +
+  tm_polygons(col = "white") +
+tm_shape(ehsa_sig_wkd_pm) +
+  tm_polygons(
+    "LEVEL",
+    palette = "-Spectral",
+    breaks = -8:9,
+    labels = ehsa_colors$CLASS,
+    title = "Legend"
+  ) +
+  tm_layout(main.title = "Hot Spots and Cold Spots (Weekdays Afternoon)",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.4, 
+            legend.width = 0.4,
+            legend.bg.color = "white",
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar(bg.color = "white") +
+  tm_grid(alpha = 0.2)
+
+```
