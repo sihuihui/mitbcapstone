@@ -17,7 +17,7 @@ pacman::p_load(tidyverse, sf, tmap, httr, performance)
 ```
 
 ```{r}
-csv <- read_csv("data/aspatial/acra_data/ACRAInformationonCorporateEntitiesOthers.csv")
+csv <- read_csv("data/aspatial/acra_data/ACRAInformationonCorporateEntitiesW.csv")
 ```
 
 ```{r}
@@ -74,8 +74,8 @@ for (postcode in postcode2){
 
 ```{r}
 merged = merge(livecompany, found, by.x='postal_code', by.y = 'results.POSTAL', all = TRUE)
-write.csv(merged, file="data/aspatial/acraOthers.csv")
-write_csv(not_found, file ="data/aspatial/not_foundOthers.csv")
+write.csv(merged, file="data/aspatial/acraW.csv")
+write_csv(not_found, file ="data/aspatial/not_foundW.csv")
 
 ```
 
