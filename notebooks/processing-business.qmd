@@ -1,0 +1,144 @@
+---
+title: "esda_businessdata"
+author: "Goh Si Hui"
+date: "Oct 21 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+```{r}
+pacman::p_load(tidyverse, purrr, sf, tmap, httr, performance)
+```
+
+```{r}
+csv <- read_csv("data/aspatial/bizlocations/acraM_postal.csv")
+```
+
+```{r}
+glimpse(csv)
+```
+
+## check for duplicates 
+
+```{r}
+duplicateUen <- csv %>%
+  group_by(uen) %>%
+  filter(n() > 1) %>%
+  ungroup()
+```
+
+```{r}
+uniqueUen <- csv %>%
+ distinct(uen, .keep_all = TRUE)
+
+uniqueUen
+```
+
+```{r}
+print("Current working directory:")
+print(getwd())
+
+setwd("C:/sihuihui/mitbcapstone/notebooks/data/aspatial/bizlocations")
+print(getwd())
+```
+
+```{r}
+
+csv_files <- list.files(path = "C:/sihuihui/mitbcapstone/notebooks/data/aspatial/bizlocations", full.names = TRUE)
+csv_files
+
+```
+
+```{r}
+read_csv(csv_files[1])
+
+```
+
+```{r}
+all_biz <- csv_files %>% 
+  map_dfr(read_csv)
+
+```
+
+```{r}
+glimpse(all_biz)
+
+```
+
+```{r}
+uniquebiz <- all_biz %>%
+ distinct(uen, .keep_all = TRUE) %>%
+  select(, -...1)
+
+uniquebiz
+```
+
+```{r}
+acraM <- read_csv("data/aspatial/bizlocations/acraM_postal.csv")
+
+```
+
+```{r}
+glimpse(acraM)
+```
+```{r}
+acraM %>% 
+  map(is.na) %>%
+  map(sum)
+
+```
+
+```{r}
+uniquebiz <- rbind(uniquebiz, acraM)%>%
+ distinct(uen, .keep_all = TRUE) 
+
+uniquebiz
+```
+
+```{r}
+
+write_rds(uniquebiz, "uniquebiz.rds")
+
+```
+
+```{r}
+biz <- uniquebiz %>%
+  select(postal_code, uen, results.LATITUDE, results.LONGITUDE) %>%
+  rename(latitude = "results.LATITUDE",
+         longitude = "results.LONGITUDE")
+
+biz
+
+```
+
+```{r}
+
+biz %>% 
+  map(is.na) %>%
+  map(sum)
+
+```
+
+```{r}
+biz <- na.omit(biz)
+
+```
+
+
+```{r}
+biz_sf <- st_as_sf(biz, 
+                   coords = c("longitude", "latitude"),
+                  crs=4326) %>%
+  st_transform(crs = 3414)
+
+```
+
+```{r}
+write_rds(biz, "biz.rds")
+write_rds(biz_sf, "biz_sf.rds")
+```
+

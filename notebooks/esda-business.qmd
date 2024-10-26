@@ -1,0 +1,70 @@
+---
+title: "esda_businessdata"
+author: "Goh Si Hui"
+date: "Oct 21 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+```{r}
+pacman::p_load(tidyverse, purrr, sf, tmap, httr, performance)
+```
+
+```{r}
+csv <- read_csv("data/aspatial/bizlocations/acraA.csv")
+```
+
+```{r}
+glimpse(csv)
+```
+
+## check for duplicates 
+
+```{r}
+duplicateUen <- csv %>%
+  group_by(uen) %>%
+  filter(n() > 1) %>%
+  ungroup()
+```
+
+```{r}
+uniqueUen <- csv %>%
+ distinct(uen, .keep_all = TRUE)
+
+uniqueUen
+```
+
+```{r}
+print("Current working directory:")
+print(getwd())
+
+setwd("C:/sihuihui/mitbcapstone/notebooks/data/aspatial/bizlocations")
+print(getwd())
+```
+
+```{r}
+
+csv_files <- list.files(path = "C:/sihuihui/mitbcapstone/notebooks/data/aspatial/bizlocations", full.names = TRUE)
+csv_files
+
+```
+
+```{r}
+read_csv(csv_files[1])
+
+```
+
+```{r}
+all_biz <- csv_files %>% 
+  map_dfr(read_csv)
+
+```
+
+```{r}
+glimpse(all_biz)
+
+```

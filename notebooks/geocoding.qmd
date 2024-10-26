@@ -17,7 +17,7 @@ pacman::p_load(tidyverse, sf, tmap, httr, performance)
 ```
 
 ```{r}
-csv <- read_csv("data/aspatial/acra_data/ACRAInformationonCorporateEntitiesW.csv")
+csv <- read_csv("data/aspatial/acra_data/ACRAInformationonCorporateEntitiesP.csv")
 ```
 
 ```{r}
@@ -74,8 +74,8 @@ for (postcode in postcode2){
 
 ```{r}
 merged = merge(livecompany, found, by.x='postal_code', by.y = 'results.POSTAL', all = TRUE)
-write.csv(merged, file="data/aspatial/acraW.csv")
-write_csv(not_found, file ="data/aspatial/not_foundW.csv")
+write_csv(merged, file="data/aspatial/acraP.csv")
+write_csv(not_found, file ="data/aspatial/not_foundP.csv")
 
 ```
 
@@ -89,10 +89,10 @@ print(getwd())
 
 #list all files in the directory 
 print("All files in the directory:")
-print(list.files(path = "/data/aspatial/acra_data", full.names = TRUE))
+print(list.files(path = "C:/sihuihui/mitbcapstone/notebooks/data/aspatial/acra_data", full.names = TRUE))
 
 # Define the csv_files variable by listing all CSV files in the specified directory
-csv_files <- list.files(path = "C:\\Users\\GFG0307", pattern = "\\.csv$", 
+csv_files <- list.files(path = "C:/sihuihui/mitbcapstone/notebooks/data/aspatial/acra_data", pattern = "\\.csv$", 
                         full.names = TRUE)
 
 print("Files to process:")
@@ -127,10 +127,8 @@ for (file in csv_files) {
   }
   
   merged = merge(livecompany, found, by.x='postal_code', by.y = 'results.POSTAL', all = TRUE)
-  write.csv(merged, file="data/aspatial/acraG.csv")
+  write_csv(merged, file="data/aspatial/acraG.csv")
   write_csv(not_found, file ="data/aspatial/not_foundG.csv")
-  
-  
 
 }
 

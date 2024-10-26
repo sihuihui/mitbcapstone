@@ -1,0 +1,227 @@
+---
+title: "edsa - buisness2"
+author: "Goh Si Hui"
+date: "Oct 26 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
+
+# Setting the environment 
+```{r}
+pacman::p_load(tidyverse, purrr, sf, tmap, sfdep)
+```
+
+# Importing Datasets 
+
+## Business data 
+```{r}
+business <- read_rds("data/rds/biz.rds")
+glimpse(business)
+```
+
+```{r}
+business_sf <- read_rds("data/rds/biz_sf.rds")
+glimpse(business_sf)
+```
+```{r}
+st_crs(business_sf)
+```
+## Singapore Master Plan 2019 Subzone Boundary
+```{r}
+
+mpsz <-st_read(dsn = "data/spatial",
+               layer = "MPSZ-2019") %>% 
+  st_transform(crs = 3414)
+
+```
+
+```{r}
+st_crs(mpsz)
+```
+```{r}
+tmap_options(check.and.fix = TRUE)
+tm_shape(mpsz) +
+  tm_polygons("lightgreen", title = "Singapore Boundary") +
+  tm_layout(main.title = "Singapore Master Plan 2019 Subzone Boundary",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha = 0.2)
+
+```
+# creating the Hexagon Layer 
+
+```{r}
+hex_layer <- st_make_grid(mpsz,
+               cellsize = 400,
+               what = "polygon",
+               square = FALSE) %>%
+  st_sf() 
+
+hex_layer
+
+```
+
+```{r}
+tm_shape(hex_layer) +
+  tm_fill(col = "white", title = "Hexagons") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Singapore with hex grid",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_shape(mpsz) +
+  tm_fill("forestgreen", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(business_sf) +
+  tm_dots(col = "blue", size = 0.005, title = "Business")
+
+
+```
+
+## Giving each hexagon an ID 
+```{r}
+hex_layer$HEX_ID <- sprintf("H%04d", seq_len(nrow(hex_layer))) %>% as.factor()
+head(hex_layer)
+```
+
+## Number of businesses in each hexagon 
+
+```{r}
+hex_layer$`BIZ_COUNT`<- lengths(st_intersects(hex_layer, business_sf))
+
+```
+
+
+## Hexagons only with businesses 
+
+```{r}
+biz_hex <- filter(hex_layer, BIZ_COUNT >0)
+biz_hex
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill("forestgreen", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(biz_hex) +
+  tm_fill(col = "white", title = "Hexagons", alpha = 1) +
+  tm_borders(alpha = 0.2) +
+  tm_layout(main.title = "Honeycomb grid corresponding to Singapore bus stops",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_shape(business_sf) +
+  tm_dots(col = "blue", size = 0.001, title = "Bus Stops") +
+  tm_grid(alpha = 0.2)
+```
+
+
+
+
+# Is there any signs of sptial clustering? 
+
+```{r}
+
+knn6_nb <- biz_hex %>% st_centroid() %>% st_knn(k=6)
+head(knn6_nb, n = 3)
+
+```
+
+```{r}
+biz_knn6 <- biz_hex %>%
+  mutate(
+    nb = knn6_nb,
+    wt = st_inverse_distance(nb, geometry,
+                             scale = 1,
+                             alpha = 1)
+  )
+
+```
+
+## Global Measure of Spatial Autocorrelation 
+
+```{r}
+global_moran_perm(
+  biz_knn6$BIZ_COUNT,
+  biz_knn6$nb,
+  biz_knn6$wt,
+  nsim = 99
+)
+
+```
+I is 0.48945, which is more than 0, showing signs of clustering 
+
+## Local  Measure of Spatial Autocorrelation 
+
+### Calculating Local Moran's I 
+
+```{r}
+lmi_biz <- biz_knn6 %>% 
+  mutate(local_moran = local_moran(
+    BIZ_COUNT, nb, wt, nsim = 99),
+         .before = 1) %>%
+  unnest(local_moran)
+
+```
+
+### Plotting Local Moran's I and p-value 
+
+```{r}
+
+ tmap_arrange(
+    tm_shape(mpsz) +
+      tm_fill(col="green") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_biz) +
+      tm_polygons("ii"),
+    tm_shape(mpsz) +
+      tm_fill(col="green") +
+      tm_borders(alpha = 0.5) +
+      tm_shape(lmi_biz) +
+      tm_polygons("p_ii_sim",
+              breaks = c(0, 0.001, 0.01, 0.05, 1),
+              labels = c("0.001", "0.01", "0.05", "Not sig"),
+              palette = "YlOrRd"
+              ),
+    ncol = 2
+  )
+
+
+```
+
+
+### Plotting LISA Map 
+
+```{r}
+
+tm_shape(mpsz) +
+  tm_fill(col="white")+
+  tm_borders(alpha = 0.5) +
+  tm_shape(lmi_biz %>% filter(p_ii_sim < 0.05)) +
+  tm_polygons("mean") + 
+  tm_layout(
+    main.title = "LISA for Businesses",
+    main.title.position = "center",
+    main.title.size = 1
+  )
+
+```
+
+
+

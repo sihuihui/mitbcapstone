@@ -1,0 +1,12 @@
+---
+title: "eda - population data"
+author: "Goh Si Hui"
+date: "Oct 26 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+---
