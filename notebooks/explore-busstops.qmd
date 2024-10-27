@@ -9,6 +9,7 @@ execute:
   message: false
   warning: false
   freeze: true
+  code-line-numbers: true
 ---
 
 # Getting Started 
@@ -97,7 +98,7 @@ glimpse(odbus_jun)
 :::
 
 
-## Geospatial Data 
+## Busstops Location 
 
 ```{r}
 busstop <- st_read(dsn = "data/spatial",

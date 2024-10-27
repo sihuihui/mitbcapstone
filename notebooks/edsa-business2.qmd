@@ -9,6 +9,7 @@ execute:
   message: false
   warning: false
   freeze: true
+  code-line-numbers: true
 ---
 
 # Setting the environment 

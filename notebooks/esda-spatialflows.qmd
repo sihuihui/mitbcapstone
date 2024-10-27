@@ -1,0 +1,281 @@
+---
+title: "Exploring Origin Bus Stop - Destination Bus Stop Flows"
+author: "Goh Si Hui"
+date: "Oct 27 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false
+  warning: false
+  freeze: true
+  code-line-numbers: true
+---
+
+# Setting up the environment 
+
+```{r}
+pacman::p_load(tmap, sf, DT, stplanr, tidyverse)
+```
+
+# Importing the Data 
+
+## Passenger Volume by Origin Destination Bus Stops 
+
+
+```{r}
+odbus_apr <- read_csv("data/aspatial/origin_destination_bus_202404.csv")
+```
+
+## Busstops Location 
+
+```{r}
+busstops <- st_read(dsn = "data/spatial",
+                   layer = "BusStop")
+
+glimpse(busstops)
+```
+
+```{r}
+busstops <- st_transform(busstops, crs = 3414)
+glimpse(busstops)
+
+```
+
+## Singapore Master Plan 2019 Subzone Data 
+```{r}
+
+mpsz <- st_read(dsn = "data/spatial",
+                layer = "MPSZ-2019") 
+
+mpsz
+```
+
+```{r}
+mpsz <- st_transform(mpsz, crs = 3414)
+mpsz
+```
+
+# Generate Hexagon Layer 
+
+hexagon grid with 400m from 1 edge to the opposite
+```{r}
+hex_layer <-
+  st_make_grid(mpsz,
+               cellsize = 400,
+               what = "polygon",
+               square = FALSE) %>%
+  st_sf()
+
+```
+
+```{r}
+tm_shape(hex_layer) +
+  tm_fill(col = "white", title = "Hexagons") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Singapore with hexagon grid",
+            main.title.position = "center",
+            main.title.size = 0.7,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_shape(mpsz) +
+  tm_fill("lawngreen", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(busstops) +
+  tm_dots(col = "firebrick", size = 0.005, title = "Bus Stops")
+
+```
+
+filter out busstops outside of singapore 
+```{r}
+busstops$bs_sg = lengths(st_intersects(busstops, mpsz))
+busstops <- filter(busstops, bs_sg > 0) %>%
+  select(, -bs_sg)
+  
+busstops
+```
+
+Remove hexagons without bus stop
+```{r}
+hex_layer$n_busstops = lengths(st_intersects(hex_layer, busstops))
+hex_layer <- filter(hex_layer, n_busstops > 0) 
+```
+
+```{r}
+tmap_style("natural")
+tm_shape(mpsz) +
+  tm_fill("lawngreen", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(hex_layer) +
+  tm_fill(col = "white", title = "Hexagons", alpha = 1) +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Hexagon grid corresponding to Singapore bus stops",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_shape(busstops) +
+  tm_dots(col = "firebrick", size = 0.001, title = "Bus Stops") +
+  tm_grid(alpha = 0.2)
+
+```
+
+## Assign ids to each hexagon 
+
+```{r}
+hex_layer$hex_id <- sprintf("H%04d", seq_len(nrow(hex_layer))) %>% as.factor()
+head(hex_layer)
+
+```
+
+# Spatial Interaction Analysis 
+
+## Generating Origin - Destination Trips by hexagon level 
+
+### Filter out the relevant data 
+Weekday morning peak hours, which is from 6am to 9am 
+
+convert from character to factor data type. 
+
+```{r}
+odbus_apr$ORIGIN_PT_CODE <- as.factor(odbus_apr$ORIGIN_PT_CODE)
+odbus_apr$DESTINATION_PT_CODE <- as.factor(odbus_apr$DESTINATION_PT_CODE)
+
+```
+
+```{r}
+glimpse(odbus_apr)
+```
+
+```{r}
+
+AMPeak <- odbus_apr %>%
+  filter(DAY_TYPE == "WEEKDAY") %>%
+  filter(TIME_PER_HOUR >= 6 &
+           TIME_PER_HOUR < 9) %>%
+  group_by(ORIGIN_PT_CODE, DESTINATION_PT_CODE) %>%
+  summarise(TRIPS = sum(TOTAL_TRIPS)) %>%
+  rename(
+    ORIGIN_BS = ORIGIN_PT_CODE,
+    DEST_BS = DESTINATION_PT_CODE
+  )
+
+```
+find out the bus stops are in which hexagon 
+```{r}
+bs_hex <- st_intersection(busstops, hex_layer) %>%
+  st_drop_geometry()%>%
+  select(BUS_STOP_N, hex_id)
+
+bs_hex
+
+```
+join morning peak trips with bs hex 
+```{r}
+AMPeak_hex <- AMPeak %>%
+  inner_join(bs_hex,
+             by = c("ORIGIN_BS" = "BUS_STOP_N")) %>%
+  rename(origin_hex_id = hex_id) %>%
+  inner_join(bs_hex,
+             by = c("DEST_BS" = "BUS_STOP_N")) %>%
+  rename(dest_hex_id = hex_id)
+
+head(AMPeak_hex)
+```
+
+Number of trips by hexagon 
+
+```{r}
+
+ampeaktrips_hex <- AMPeak_hex %>%
+  group_by(origin_hex_id, dest_hex_id) %>%
+  summarise(total_trips = sum(TRIPS))
+
+head(ampeaktrips_hex)
+```
+
+
+## Visualising Spatial Interactions 
+
+```{r}
+flowlines <- ampeaktrips_hex %>% od2line(
+  hex_layer,
+  zone_code = "hex_id")
+
+
+```
+```{r}
+
+write_rds(flowlines, "data/rds/flowlines_apr.rds")
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_polygons("green", title = "Singapore Boundary", alpha = 0.5) +
+  
+  tm_shape(hex_layer) +
+  tm_polygons(col = "white", title = "Hexagons", alpha = 1) +
+  
+  tm_shape(flowlines) +
+  tm_lines(lwd = "total_trips",
+           style = "quantile",
+           col = "red",
+           scale = c(0.1, 1, 3, 5, 7),
+           title.lwd = "# of bus trips",
+           alpha = 0.8) +
+  
+  tm_layout(main.title = "Bus Passenger flow for Weekdays",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_grid(alpha = 0.2)
+
+```
+
+```{r}
+flowlines_df <- flowlines %>% st_drop_geometry()
+
+```
+
+```{r}
+
+
+quantile(flowlines$total_trips, probs = c(0, 0.125, 0.25, 0.375, 0.50, 0.625, 0.75, 0.875, 0.9, 0.925, 0.95, 0.975, 0.98, 0.985, 0.99, 0.995, 1))
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_polygons("green", title = "Singapore Boundary", alpha = 0.5) +
+  
+  tm_shape(hex_layer) +
+  tm_polygons(col = "white", title = "Hexagons", alpha = 1) +
+  
+  tm_shape(flowlines %>% filter(total_trips >2088)) +
+  tm_lines(lwd = "total_trips",
+           style = "quantile",
+           col = "red",
+           scale = c(0.1, 1, 3, 5, 7),
+           title.lwd = "# of bus trips",
+           alpha = 0.8) +
+  
+  tm_layout(main.title = "Bus Passenger flow for Weekdays",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
+  tm_grid(alpha = 0.2)
+
+```
