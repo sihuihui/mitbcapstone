@@ -1,7 +1,7 @@
 ---
-title: "edsa - buisness2"
+title: "ESDA - Population"
 author: "Goh Si Hui"
-date: "Oct 26 2024"
+date: "Oct 27 2024"
 date-modified: "last-modified"
 execute: 
   eval: true
@@ -20,17 +20,29 @@ pacman::p_load(tidyverse, purrr, sf, tmap, sfdep)
 
 ## Business data 
 ```{r}
-business <- read_rds("data/rds/biz.rds")
-glimpse(business)
+respop <- read_rds("data/rds/res_coords.rds")
+glimpse(respop)
+```
+convert to sf 
+```{r}
+respop_sf <- st_as_sf(respop, 
+                       coords = c("longitude", "latitude"),
+                       crs=4326) %>%
+  st_transform(crs = 3414)
+
+glimpse(respop_sf)
 ```
 
+
 ```{r}
-business_sf <- read_rds("data/rds/biz_sf.rds")
-glimpse(business_sf)
+dwelling <- respop_sf %>%
+  group_by(postal) %>%
+  summarise (TOTAL_DWELLING = sum(total_dwelling_units))
+
 ```
-```{r}
-st_crs(business_sf)
-```
+
+
+
 ## Singapore Master Plan 2019 Subzone Boundary
 ```{r}
 
@@ -43,22 +55,17 @@ mpsz <-st_read(dsn = "data/spatial",
 ```{r}
 st_crs(mpsz)
 ```
+
 ```{r}
-tmap_options(check.and.fix = TRUE)
-tm_shape(mpsz) +
-  tm_polygons("lightgreen", title = "Singapore Boundary") +
-  tm_layout(main.title = "Singapore Master Plan 2019 Subzone Boundary",
-            main.title.position = "center",
-            main.title.size = 1.0,
-            legend.height = 0.35, 
-            legend.width = 0.35,
-            frame = TRUE) +
-  tm_compass(type="8star", size = 2) +
-  tm_scale_bar() +
-  tm_grid(alpha = 0.2)
+
+  tm_shape(mpsz) +
+  tm_fill("forestgreen", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(respop_sf) +
+  tm_dots(col = "blue", size = 0.005, title = "Business")
 
 ```
-# creating the Hexagon Layer 
+
+# Creating the Hexagon Layer 
 
 ```{r}
 hex_layer <- st_make_grid(mpsz,
@@ -70,6 +77,7 @@ hex_layer <- st_make_grid(mpsz,
 hex_layer
 
 ```
+
 
 ```{r}
 tm_shape(hex_layer) +
@@ -85,7 +93,7 @@ tm_shape(hex_layer) +
   tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
   tm_shape(mpsz) +
   tm_fill("forestgreen", title = "Singapore Boundary", alpha = 0.5) +
-  tm_shape(business_sf) +
+  tm_shape(respop_sf) +
   tm_dots(col = "blue", size = 0.005, title = "Business")
 
 
@@ -97,28 +105,25 @@ hex_layer$HEX_ID <- sprintf("H%04d", seq_len(nrow(hex_layer))) %>% as.factor()
 head(hex_layer)
 ```
 
-## Number of businesses in each hexagon 
+## Count of HDB blocks in each hexagon 
 
 ```{r}
-hex_layer$`BIZ_COUNT`<- lengths(st_intersects(hex_layer, business_sf))
+hex_layer$'HDB_COUNT' <- lengths(st_intersects(hex_layer, respop_sf))
 
 ```
 
-
-## Hexagons only with businesses 
-
 ```{r}
-biz_hex <- filter(hex_layer, BIZ_COUNT >0)
-biz_hex
+res_hex <- filter(hex_layer, HDB_COUNT > 0)
+res_hex
 ```
 
 ```{r}
 tm_shape(mpsz) +
   tm_fill("forestgreen", title = "Singapore Boundary", alpha = 0.5) +
-  tm_shape(biz_hex) +
+  tm_shape(res_hex) +
   tm_fill(col = "white", title = "Hexagons", alpha = 1) +
   tm_borders(alpha = 0.2) +
-  tm_layout(main.title = "Honeycomb grid corresponding to Singapore bus stops",
+  tm_layout(main.title = "Honeycomb grid corresponding to HDB Residential Estates",
             main.title.position = "center",
             main.title.size = 1.0,
             legend.height = 0.35, 
@@ -126,25 +131,79 @@ tm_shape(mpsz) +
             frame = TRUE) +
   tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
   tm_scale_bar(bg.color = "white", bg.alpha = 0.5) +
-  tm_shape(business_sf) +
+  tm_shape(respop_sf) +
   tm_dots(col = "blue", size = 0.001, title = "Bus Stops") +
   tm_grid(alpha = 0.2)
 ```
 
 
 
+## Sum of Dwellings in each hexagon 
+
+First find out which blocks are in which hexagon 
+```{r}
+res_hex <- st_intersection(respop_sf, hex_layer) %>%
+  st_drop_geometry() %>%
+  select(c(postal,total_dwelling_units, HEX_ID))
+head(res_hex)
+
+```
+
+Aggregate by hexagon 
+```{r}
+dwelling_hex <- res_hex %>%
+  group_by(HEX_ID) %>%
+  summarise(TOTAL_DWELLING = sum(total_dwelling_units))
+
+head(dwelling_hex)
+
+```
+
+## Hexagons only with dwelling
+
+```{r}
+
+hex_layer <- left_join(hex_layer, dwelling_hex, by = join_by(HEX_ID))
+head(hex_layer)
+
+```
+
+```{r}
+dwell_hex <- filter(hex_layer, TOTAL_DWELLING > 0)
+dwell_hex
+```
+
+```{r}
+tm_shape(mpsz) +
+  tm_fill("forestgreen", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(dwell_hex) +
+  tm_fill("TOTAL_DWELLING",
+          style = "quantile",
+          palette = "Blues",
+          title = "Total Dwelling") +
+  tm_borders(alpha = 0.2) +
+  tm_layout(main.title = "HDB Dwelling",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) 
+```
+
 
 # Is there any signs of spatial clustering? 
 
 ```{r}
 
-knn6_nb <- biz_hex %>% st_centroid() %>% st_knn(k=6)
+knn6_nb <- dwell_hex %>% st_centroid() %>% st_knn(k=6)
 head(knn6_nb, n = 3)
 
 ```
 
 ```{r}
-biz_knn6 <- biz_hex %>%
+dwell_knn6 <- dwell_hex %>%
   mutate(
     nb = knn6_nb,
     wt = st_inverse_distance(nb, geometry,
@@ -158,23 +217,23 @@ biz_knn6 <- biz_hex %>%
 
 ```{r}
 global_moran_perm(
-  biz_knn6$BIZ_COUNT,
-  biz_knn6$nb,
-  biz_knn6$wt,
+  dwell_knn6$TOTAL_DWELLING,
+  dwell_knn6$nb,
+  dwell_knn6$wt,
   nsim = 99
 )
 
 ```
-I is 0.48945, which is more than 0, showing signs of clustering 
+I is 0.14372, which is more than 0, showing signs of clustering 
 
 ## Local  Measure of Spatial Autocorrelation 
 
 ### Calculating Local Moran's I 
 
 ```{r}
-lmi_biz <- dwell_knn6 %>% 
+lmi_dwell <- dwell_knn6 %>% 
   mutate(local_moran = local_moran(
-    BIZ_COUNT, nb, wt, nsim = 99),
+    TOTAL_DWELLING, nb, wt, nsim = 99),
          .before = 1) %>%
   unnest(local_moran)
 
@@ -188,12 +247,12 @@ lmi_biz <- dwell_knn6 %>%
     tm_shape(mpsz) +
       tm_fill(col="green") +
       tm_borders(alpha = 0.5) +
-      tm_shape(lmi_biz) +
+      tm_shape(lmi_dwell) +
       tm_polygons("ii"),
     tm_shape(mpsz) +
       tm_fill(col="green") +
       tm_borders(alpha = 0.5) +
-      tm_shape(lmi_biz) +
+      tm_shape(lmi_dwell) +
       tm_polygons("p_ii_sim",
               breaks = c(0, 0.001, 0.01, 0.05, 1),
               labels = c("0.001", "0.01", "0.05", "Not sig"),
@@ -205,7 +264,6 @@ lmi_biz <- dwell_knn6 %>%
 
 ```
 
-
 ### Plotting LISA Map 
 
 ```{r}
@@ -213,15 +271,12 @@ lmi_biz <- dwell_knn6 %>%
 tm_shape(mpsz) +
   tm_fill(col="white")+
   tm_borders(alpha = 0.5) +
-  tm_shape(lmi_biz %>% filter(p_ii_sim < 0.05)) +
+  tm_shape(lmi_dwell %>% filter(p_ii_sim < 0.05)) +
   tm_polygons("mean") + 
   tm_layout(
-    main.title = "LISA for Businesses",
+    main.title = "LISA for HDB Residences",
     main.title.position = "center",
     main.title.size = 1
   )
 
 ```
-
-
-

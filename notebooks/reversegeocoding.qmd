@@ -138,4 +138,7 @@ hdb_coords_tidy <- hdb_coords %>%
 glimpse(hdb_coords_tidy)
 ```
 
+```{r}
 
+write_rds(hdb_coords_tidy, "data/aspatial/res_coords.rds")
+```
