@@ -173,7 +173,7 @@ I is 0.48945, which is more than 0, showing signs of clustering
 ### Calculating Local Moran's I 
 
 ```{r}
-lmi_biz <- dwell_knn6 %>% 
+lmi_biz <- biz_knn6 %>% 
   mutate(local_moran = local_moran(
     BIZ_COUNT, nb, wt, nsim = 99),
          .before = 1) %>%
