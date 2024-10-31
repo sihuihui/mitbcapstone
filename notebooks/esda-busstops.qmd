@@ -44,12 +44,30 @@ glimpse(busstops)
 ```{r}
 
 mpsz <-st_read(dsn = "data/spatial",
-               layer = "MPSZ-2019") %>% 
-  st_transform(crs = 3414)
+               layer = "MPSZ-2019") 
+
+```
+```{r}
+st_crs(mpsz)
 
 ```
 
-hexagon grid with 400m from 1 edge to the opposite
+```{r}
+
+mpsz <- mpsz  %>%
+  st_transform(crs = 3414)
+
+
+```
+transform the projection system 
+
+```{r}
+st_crs(mpsz)
+
+```
+
+### hexagon grid with 400m from 1 edge to the opposite
+creating a hexagon grid over the singapore boundary 
 ```{r}
 hex_layer <-
   st_make_grid(mpsz,
@@ -78,6 +96,8 @@ tm_shape(hex_layer) +
   tm_dots(col = "firebrick", size = 0.005, title = "Bus Stops")
 
 ```
+Observe that there are bus stops outside of Singapore 
+
 filter out busstops outside of singapore 
 ```{r}
 busstops$bs_sg = lengths(st_intersects(busstops, mpsz))
@@ -127,6 +147,34 @@ head(hex_layer)
 
 ```
 
+hexagons with most bus stops 
+```{r}
+tmap_options(check.and.fix = TRUE)
+tmap_mode("view")
+tm_shape(mpsz) +
+  tm_fill("forestgreen", title = "Singapore Boundary", alpha = 0.5) +
+  tm_shape(hex_layer) +
+  tm_fill("n_busstops",
+          style = "quantile",
+          palette = "Blues",
+          title = "Number of bus stops") +
+  tm_borders(alpha = 0.2) +
+  tm_layout(main.title = "Number of bus stops",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.height = 0.35, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2, bg.color = "white", bg.alpha = 0.5) +
+  tm_scale_bar(bg.color = "white", bg.alpha = 0.5) 
+
+```
+
+```{r}
+tmap_mode("plot")
+
+```
+
 
 ### passenger trips 
 
@@ -140,7 +188,7 @@ glimpse(apr_od)
 
 # Data Wrangling of Aspatial Data 
 
-Need to process the od trips data 
+Need to process the od trips data
 
 ## data type 
 convert from character to factor data type. 
@@ -321,6 +369,7 @@ trips <- trips %>%
 head(trips)
 
 ```
+
 # Creating Space Time cube 
 ```{r}
 spacetime(trips, hex_layer,
@@ -418,7 +467,7 @@ spacetime(wke_trips_cube, hex_layer,
 
 Peak Hour Periods:
 
-- Weekday Morning Peak - 9am to 9am
+- Weekday Morning Peak - 6am to 9am
 
 - Weekday Afternoon Peak - 5pm to 8pm
 

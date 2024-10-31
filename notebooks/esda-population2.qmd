@@ -124,7 +124,7 @@ tm_shape(mpsz) +
   tm_shape(res_hex) +
   tm_fill(col = "white", title = "Hexagons", alpha = 1) +
   tm_borders(alpha = 0.2) +
-  tm_layout(main.title = "Honeycomb grid corresponding to HDB Residential Estates",
+  tm_layout(main.title = "Hexagon grid corresponding to HDB Residential Estates",
             main.title.position = "center",
             main.title.size = 1.0,
             legend.height = 0.35, 
