@@ -16,12 +16,18 @@ format:
 
 manuscript:
   notebooks:
-    - notebook: notebooks/explore-bslocations.qmd
-      title: Exploring Bus Stop Locations
 
     - notebook: notebooks/explore-busstops.qmd
       title: Exploring Origin - Destination Bus Stops Flows
       
     - notebook: notebooks/esda-busstops.qmd
       title: Exploratory Data Analysis for Bus Stop Locations 
+    
+    - notebook: notebooks/edsa-business2.qmd
+      title: Exploratory Data Analysis for Business Data 
+      
+    - notebook: notebooks/esda-population2.qmd
+      title: Exploratory Data Analysis for Population Data
 
+    - notebook: notebooks/esda-spatialflows.qmd
+      title: Exploratory Data Analysis for Spatial Flows Data
